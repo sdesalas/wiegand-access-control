@@ -6,6 +6,8 @@
 #define GPIO_READER_D1 4 // (GPIO4 = D2)
 #define GPIO_DOOR_RELAY 14 // (GPIO14 = D5)
 
+Ticker resetCheck;
+
 void ICACHE_RAM_ATTR GPIO_factoryReset() {
   Serial.println("FLASH pin pressed.");
   // Check if still pressed 5 seconds later
@@ -16,7 +18,7 @@ void ICACHE_RAM_ATTR GPIO_factoryReset() {
       Serial.println("Resetting in 5 seconds..");
       GPIO_blink(GPIO_STATUS_LED, 5, SECOND);
       Settings_reset();
-      Metrics_reset();
+      // Metrics_reset();
       ESP.restart();
     } else {
       Serial.println("FALSE ALARM. Skipping factory reset.");
@@ -36,14 +38,8 @@ void GPIO_init() {
   digitalWrite(GPIO_DOOR_RELAY, 0);
   // Add factory reset interrupt
   attachInterrupt(digitalPinToInterrupt(GPIO_FACTORY_RESET), GPIO_factoryReset, FALLING);
-  // Initialize sensors
-  gpio_sensors.begin();
   // Locate the devices on the bus:
-  Serial.println("Locating devices.");
-  Serial.print("-> ");
-  gpio_device_count = gpio_sensors.getDeviceCount();
-  Serial.print(gpio_device_count);
-  Serial.println(" devices");
+  Serial.println("Checking devices.");
   delay(1000);
 }
 
@@ -52,7 +48,7 @@ void GPIO_blink(int times) {
 }
 
 void GPIO_blink(int times, int pause) {
-  GPIO_blink(GPIO_BLUE_LED, times, pause);
+  GPIO_blink(GPIO_STATUS_LED, times, pause);
 }
 
 void GPIO_blink(int pin, int times, int pause) {
