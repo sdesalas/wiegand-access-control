@@ -49,3 +49,6 @@ button.darkgrey {
   border: 1px solid #666;
   color: #eee;
 }
+textarea {
+  min-height: 200px;
+}
