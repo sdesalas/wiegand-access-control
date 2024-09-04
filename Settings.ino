@@ -37,7 +37,7 @@ bool Settings_save(JsonObjectConst input, const char* file) {
 }
 
 void Settings_reset() {
-  String files[SETTINGS_FILE_COUNT] = { "fan" };
+  String files[SETTINGS_FILE_COUNT] = { "wifi" };
   for (int i = 0; i < SETTINGS_FILE_COUNT; i++) {
     String defaultsPath = SETTINGS_DEFAULTS_TEMPLATE;
     String settingsPath = SETTINGS_FILE_TEMPLATE;
