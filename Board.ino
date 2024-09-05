@@ -44,7 +44,7 @@ void Board_ntp() {
   ntpClient.begin();
   ntpClient.update();
   timeOffset = ntpClient.getEpochTime() - (millis() / 1000);
-  Serial.print("Board booted up at: ");
+  Serial.print("Current epoch time: ");
   Serial.println(Board_getTime());
 }
 

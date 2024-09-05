@@ -15,6 +15,7 @@ String setting_reboot_key = "";
 void Settings_init() {
   // Initialize the settings
   Settings_load("wifi");
+  Settings_load("reboot");
   Serial.print("The SSID is ");
   Serial.println(setting_wifi_ssid);
   Serial.print("The AP SSID is ");
@@ -32,6 +33,10 @@ void Settings_load(const char* file) {
       setting_wifi_ap_hidden = setting["ap_hidden"] | false;
       setting_wifi_ssid = setting["ssid"] | "";
       setting_wifi_password = setting["password"] | "";
+    }
+    if (strcmp(file, "reboot") == 0) {
+      setting_reboot_ota = setting["ota"] | false;
+      setting_reboot_key = setting["key"] | "";
     }
 }
 
