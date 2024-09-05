@@ -2,11 +2,23 @@
 #define SETTINGS_DEFAULTS_TEMPLATE "/defaults/#.json"
 #define SETTINGS_FILE_TEMPLATE  "/settings/#.json"
 
+// "wifi" options
+String setting_wifi_ap_ssid = "";
+String setting_wifi_ap_password = "";
+boolean setting_wifi_ap_hidden = false;
+String setting_wifi_ssid = "";
+String setting_wifi_password = "";
+// "reboot" options 
+boolean setting_reboot_ota = false;
+String setting_reboot_key = "";
+
 void Settings_init() {
   // Initialize the settings
   Settings_load("wifi");
   Serial.print("The SSID is ");
   Serial.println(setting_wifi_ssid);
+  Serial.print("The AP SSID is ");
+  Serial.println(setting_wifi_ap_ssid);
 }
 
 void Settings_load(const char* file) {
@@ -15,9 +27,11 @@ void Settings_load(const char* file) {
     JsonDocument doc = FS_readJson(settingsPath.c_str());
     JsonObject setting = doc.as<JsonObject>();
     if (strcmp(file, "wifi") == 0) {
+      setting_wifi_ap_ssid = setting["ap_ssid"] | "";
+      setting_wifi_ap_password = setting["ap_password"] | "";
+      setting_wifi_ap_hidden = setting["ap_hidden"] | false;
       setting_wifi_ssid = setting["ssid"] | "";
       setting_wifi_password = setting["password"] | "";
-      setting_wifi_hidden = setting["hidden"] | false;
     }
 }
 

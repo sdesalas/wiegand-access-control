@@ -53,20 +53,28 @@
         <fieldset>
           <legend>Access Point for adminstration:</legend>
           <label>
-            SSID
-            <input name="ssid" placeholder="ssid" x-model="data.ssid"/>
+            AP SSID
+            <input placeholder="AP ssid" x-model="data.ap_ssid"/>
           </label>
           <label>
-            Password
-            <input name="password" placeholder="password" x-model="data.password"/>
+            AP Password
+            <input placeholder="AP password" x-model="data.ap_password"/>
+          </label>
+          <label>
+            <input type="checkbox" x-model="data.hidden"/>
+            AP Hidden
           </label>
         </fieldset>
         <fieldset>
-            <legend>Hidden SSID:</legend>
-          <label>
-            <input type="checkbox" name="hidden" x-model="data.hidden"/>
-            Enabled
-          </label>
+            <legend data-tooltip="Local Wifi router details, to connect to the internet" >Local Wifi:</legend>
+            <label>
+              SSID
+              <input placeholder="ssid" x-model="data.ssid"/>
+            </label>
+            <label>
+              Password
+              <input placeholder="password" x-model="data.password"/>
+            </label>
         </fieldset>
         <button @click.prevent="save($event.target)">Save</button>
         <br/>

@@ -27,7 +27,7 @@ void ICACHE_RAM_ATTR GPIO_factoryReset() {
 }
 
 void GPIO_init() {
-  Serial.print("GPIO_init()");
+  Serial.println("GPIO_init()");
   // Initialize Pins
   pinMode(GPIO_READER_D0, INPUT); 
   pinMode(GPIO_READER_D1, INPUT);

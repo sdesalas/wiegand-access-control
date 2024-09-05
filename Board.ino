@@ -1,3 +1,13 @@
+#include <NTPClient.h>
+#include <WiFiUdp.h>
+
+#define NTP_SERVER "pool.ntp.org"
+
+WiFiUDP ntpUDP;
+NTPClient ntpClient(ntpUDP, NTP_SERVER);
+
+// number of seconds since January 1, 1970 GMT when board initializes.
+unsigned long timeOffset = 0;
 
 void Board_init() {
   Serial.begin(115200);
@@ -27,4 +37,18 @@ void Board_init() {
   Serial.print(ESP.getFlashChipSpeed() / 1000 / 1000);
   Serial.println("Mhz");
   Serial.println("=================================");
+}
+
+void Board_ntp() {
+  Serial.printf("Connecting to '%s'...\n", NTP_SERVER);
+  ntpClient.begin();
+  ntpClient.update();
+  timeOffset = ntpClient.getEpochTime() - (millis() / 1000);
+  Serial.print("Board booted up at: ");
+  Serial.println(Board_getTime());
+}
+
+// UNIX epoch time (seconds since 1970-01-01 GMT)
+unsigned long Board_getTime() {
+  return timeOffset + (millis() / 1000);
 }

@@ -1,5 +1,7 @@
 {
+  "ap_ssid": "ssid",
+  "ap_password": "password",
+  "ap_hidden": false,
   "ssid": "ssid",
-  "password": "password",
-  "hidden": false
+  "password": "password"
 }
