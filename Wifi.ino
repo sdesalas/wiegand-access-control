@@ -1,5 +1,5 @@
 
-#define WIFI_CONN_MAX_WAIT 20*SECOND
+#define WIFI_CONN_MAX_WAIT 12*SECOND
 
 IPAddress APIP(192, 168, 66, 1); // Admin IP
 Ticker blinker;
@@ -37,13 +37,17 @@ void Wifi_createAP() {
 
 long ntpRetryMs = 10*SECOND;
 void Wifi_initNtp() {
-  if (Wifi_connect()) {
-    Board_ntp();
+    // The board itself does not have a CMOS clock!
+    // Getting accurate reading from NTP Server is important because
+    // access logs need a timestamp in order to be meaningful.
+    // Keep trying for 30 minutes (exponential backoff).
+  if (Wifi_connect() && Board_ntp()) {
     WiFi.disconnect(true);
   } else {
+    Serial.println("Error! Cannot connect for NTP time.");
     GPIO_blink(GPIO_STATUS_LED, 5, 250);
-    if (ntpRetryMs < 5*MINUTE) {
-      Serial.printf("Error! Cannot connect for NTP time. Retry in %d seconds...\n", ntpRetryMs/SECOND);
+    if (ntpRetryMs < 15*MINUTE) {
+      Serial.printf("Retry in %d seconds...\n", ntpRetryMs/SECOND);
       ntpFetcher.once_ms_scheduled(ntpRetryMs, Wifi_initNtp);
       ntpRetryMs *= 2; // --> Exponential backoff
     }
@@ -62,7 +66,7 @@ boolean Wifi_connect() {
     digitalWrite(GPIO_STATUS_LED, blink);
     delay(200); Serial.print(".");
     if (millis() - start > WIFI_CONN_MAX_WAIT) {
-      Serial.printf("Unable to connect over %d seconds.", WIFI_CONN_MAX_WAIT);
+      Serial.printf("\nUnable to connect over %d seconds.", WIFI_CONN_MAX_WAIT/SECOND);
       break;
     }
   }

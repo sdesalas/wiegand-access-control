@@ -39,13 +39,18 @@ void Board_init() {
   Serial.println("=================================");
 }
 
-void Board_ntp() {
+bool Board_ntp() {
   Serial.printf("Connecting to '%s'...\n", NTP_SERVER);
   ntpClient.begin();
-  ntpClient.update();
-  timeOffset = ntpClient.getEpochTime() - (millis() / 1000);
-  Serial.print("Current epoch time: ");
-  Serial.println(Board_getTime());
+  bool success = ntpClient.update();
+  if (success) {
+    // We keep track of `millis()` locally so we just need
+    // to save the offset using the NTP epoch time.
+    timeOffset = ntpClient.getEpochTime() - (millis() / 1000);
+    Serial.print("Current epoch time: ");
+    Serial.println(Board_getTime());
+  }
+  return success;
 }
 
 // UNIX epoch time (seconds since 1970-01-01 GMT)
