@@ -2,13 +2,25 @@
 #define GPIO_FACTORY_RESET 0 // "FLASH" pin
 #define GPIO_RESET_DELAY (5*SECOND) // Press for 5 secs before flashing
 #define GPIO_STATUS_LED 12 // (GPIO12 = D6)
-#define GPIO_READER_D0 5 // (GPIO5 = D1)
-#define GPIO_READER_D1 4 // (GPIO4 = D2)
+#define GPIO_KEYPAD_D0 5 // (GPIO5 = D1)
+#define GPIO_KEYPAD_D1 4 // (GPIO4 = D2)
 #define GPIO_DOOR_RELAY 14 // (GPIO14 = D5)
+
+// Interrupt signature depends on board type
+#if defined(ESP8266)
+  #define ISR ICACHE_RAM_ATTR
+#elif defined(ESP32)
+  #define ISR IRAM_ATTR
+#else
+  #define ISR
+#endif
 
 Ticker resetCheck;
 
-void ICACHE_RAM_ATTR GPIO_factoryReset() {
+WIEGAND keypadReader();
+void ISR keypadReadD0() { keypadReader.ReadD0(); }
+void ISR keypadReadD1() { keypadReader.ReadD1(); }
+void ISR GPIO_factoryReset() {
   Serial.println("FLASH pin pressed.");
   // Check if still pressed 5 seconds later
   resetCheck.once_ms_scheduled(GPIO_RESET_DELAY, []() {
@@ -28,19 +40,25 @@ void ICACHE_RAM_ATTR GPIO_factoryReset() {
 
 void GPIO_init() {
   Serial.println("GPIO_init()");
-  // Initialize Pins
-  pinMode(GPIO_READER_D0, INPUT); 
-  pinMode(GPIO_READER_D1, INPUT);
+
+  // Add door relay + status LED
   pinMode(GPIO_STATUS_LED, OUTPUT);
   pinMode(GPIO_DOOR_RELAY, OUTPUT);
-  pinMode(GPIO_FACTORY_RESET, INPUT_PULLUP); // DO NOT CHANGE, "FLASH" pin starts HIGH
   digitalWrite(GPIO_STATUS_LED, 0);
   digitalWrite(GPIO_DOOR_RELAY, 0);
-  // Add factory reset interrupt
+
+  // Add wiegand keypad
+  pinMode(GPIO_KEYPAD_D0, INPUT);
+  pinMode(GPIO_KEYPAD_D1, INPUT);
+  attachInterrupt(digitalPinToInterrupt(GPIO_KEYPAD_D0), keypadReadD0, FALLING);
+  attachInterrupt(digitalPinToInterrupt(GPIO_KEYPAD_D1), keypadReadD1, FALLING);
+  
+  // Add factory reset
+  pinMode(GPIO_FACTORY_RESET, INPUT_PULLUP); // DO NOT CHANGE, "FLASH" pin starts HIGH
   attachInterrupt(digitalPinToInterrupt(GPIO_FACTORY_RESET), GPIO_factoryReset, FALLING);
-  // Locate the devices on the bus:
-  Serial.println("Checking devices.");
+
   delay(1000);
+  Serial.println("Ready for input..");
 }
 
 void GPIO_blink(int times) {

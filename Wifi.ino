@@ -37,7 +37,7 @@ void Wifi_createAP() {
 
 long ntpRetryMs = 10*SECOND;
 void Wifi_initNtp() {
-    // The board itself does not have a CMOS clock!
+    // The board itself does not have a CMOS clock.
     // Getting accurate reading from NTP Server is important because
     // access logs need a timestamp in order to be meaningful.
     // Keep trying for 30 minutes (exponential backoff).

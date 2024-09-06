@@ -11,6 +11,7 @@ unsigned long timeOffset = 0;
 
 void Board_init() {
   Serial.begin(115200);
+  ntpClient.begin();
   Serial.println();
   Serial.println("=================================");
   Serial.print("ESP.getChipId(): ");
@@ -41,7 +42,6 @@ void Board_init() {
 
 bool Board_ntp() {
   Serial.printf("Connecting to '%s'...\n", NTP_SERVER);
-  ntpClient.begin();
   bool success = ntpClient.update();
   if (success) {
     // We keep track of `millis()` locally so we just need
