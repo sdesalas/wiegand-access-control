@@ -2,9 +2,12 @@
 #define GPIO_FACTORY_RESET 0 // "FLASH" pin
 #define GPIO_RESET_DELAY (5*SECOND) // Press for 5 secs before flashing
 #define GPIO_STATUS_LED 12 // (GPIO12 = D6)
+#define GPIO_READER_D0 5 // (GPIO5 = D1)
+#define GPIO_READER_D1 4 // (GPIO4 = D2)
+#define GPIO_READER_RELAY 14 // (GPIO14 = D5)
 #define GPIO_KEYPAD_D0 5 // (GPIO5 = D1)
 #define GPIO_KEYPAD_D1 4 // (GPIO4 = D2)
-#define GPIO_DOOR_RELAY 14 // (GPIO14 = D5)
+#define GPIO_KEYPAD_RELAY 14 // (GPIO14 = D5)
 
 // Interrupt signature depends on board type
 #if defined(ESP8266)
