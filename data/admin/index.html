@@ -37,6 +37,14 @@
             <input type="checkbox" name="enabled" checked x-model="data.enabled"/>
             Enabled
           </label>
+          <label>
+            Master Card (Add)
+            <input placeholder="Master Key (Add)" x-model="data.master_key_add"/>
+          </label>
+          <label>
+            Master Card (Remove)
+            <input placeholder="Master Key (Remove)" x-model="data.master_key_remove"/>
+          </label>
         </fieldset>
         <fieldset>
           <legend data-tooltip="List of access keycards, one per line." >Users:</legend>
@@ -193,7 +201,7 @@
       }
       function settings(file) {
         const settings = {
-          users: ['enabled', 'users'],
+          access: ['enabled', 'master_key_add', 'master_key_remove', 'users'],
           wifi: ['ssid', 'password', 'hidden'],
           reboot: ['ota', 'key']
         }

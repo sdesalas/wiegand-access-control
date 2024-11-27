@@ -1,4 +1,6 @@
 {
   "enabled": true,
-  "users": ""
+  "users": "",
+  "master_key_add": "",
+  "master_key_delete": ""
 }

@@ -54,6 +54,10 @@ bool Board_ntp() {
 }
 
 // UNIX epoch time (seconds since 1970-01-01 GMT)
+// FIXME: There is a problem in this function
+// because of the wrap-around nature of the
+// `millis()` function. After 2^32 milliseconds
+// the int32 overflows back to 0.
 unsigned long Board_getTime() {
   return timeOffset + (millis() / 1000);
 }
