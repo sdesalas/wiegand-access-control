@@ -1,4 +1,4 @@
-#define SETTINGS_FILE_COUNT 3
+#define SETTINGS_FILE_COUNT 4
 #define SETTINGS_DEFAULTS_TEMPLATE "/defaults/#.json"
 #define SETTINGS_FILE_TEMPLATE  "/settings/#.json"
 
@@ -73,8 +73,9 @@ bool Settings_save(JsonObjectConst input, const char* file) {
 }
 
 void Settings_reset() {
-  String files[SETTINGS_FILE_COUNT] = { "access", "wifi" , "telemetry", "reboot" };
-  for (int i = 0; i < SETTINGS_FILE_COUNT; i++) {
+  String files[] = { "access", "wifi" , "telemetry", "reboot" };
+  int size = sizeof(files)/sizeof(*files);
+  for (int i = 0; i < size; i++) {
     String defaultsPath = SETTINGS_DEFAULTS_TEMPLATE;
     String settingsPath = SETTINGS_FILE_TEMPLATE;
     defaultsPath.replace("#", files[i]);

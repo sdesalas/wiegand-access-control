@@ -80,7 +80,7 @@ void GPIO_init() {
 
   // Start reading
   delay(1000);
-  readerTicker.once_ms_scheduled(1000, GPIO_checkReaders);
+  readerCheck.once_ms_scheduled(1000, GPIO_checkReaders);
   Serial.println("Ready for input..");
 }
 
@@ -125,5 +125,5 @@ void GPIO_checkReaders() {
   // digitalWrite(GPIO_READER1_LED, digitalRead(GPIO_READER1_D0) & digitalRead(GPIO_READER1_D1));
   // digitalWrite(GPIO_READER2_LED, digitalRead(GPIO_READER2_D0) & digitalRead(GPIO_READER2_D1));
   // Schedule next run
-  readerTicker.once_ms_scheduled(50, GPIO_checkReaders);
+  readerCheck.once_ms_scheduled(50, GPIO_checkReaders);
 }

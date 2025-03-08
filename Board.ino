@@ -1,6 +1,5 @@
 void Board_init() {
   Serial.begin(115200);
-  ntpClient.begin();
   Serial.println();
   Serial.println("=================================");
   Serial.print("ESP.getChipId(): ");
