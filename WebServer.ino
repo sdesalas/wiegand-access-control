@@ -9,22 +9,22 @@ Ticker rebootTimer;
 
 void WebServer_init()
 {
-  server.on("/logs/history.csv", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("GET /logs/history.csv");
-    AsyncResponseStream *response = request->beginResponseStream("text/csv");
-    // Use querystring to determine which history file to return
-    String offset = "0";
-    if (request->hasParam("offset")) {
-      offset = request->arg("offset");
-    }
-    String path = LOG_FILE_FORMAT;
-    path.replace("#", offset);
-    Serial.print("Reading: ");
-    Serial.println(path);
-    File file = LittleFS.open(path.c_str(), "r");
-    if (file) request->send(LittleFS, path, "text/csv");
-    else request->send(response);
-  });
+  // server.on("/logs/history.csv", HTTP_GET, [](AsyncWebServerRequest *request){
+  //   Serial.println("GET /logs/history.csv");
+  //   AsyncResponseStream *response = request->beginResponseStream("text/csv");
+  //   // Use querystring to determine which history file to return
+  //   String offset = "0";
+  //   if (request->hasParam("offset")) {
+  //     offset = request->arg("offset");
+  //   }
+  //   String path = LOG_FILE_FORMAT;
+  //   path.replace("#", offset);
+  //   Serial.print("Reading: ");
+  //   Serial.println(path);
+  //   File file = LittleFS.open(path.c_str(), "r");
+  //   if (file) request->send(LittleFS, path, "text/csv");
+  //   else request->send(response);
+  // });
 
   server.addHandler(new AsyncCallbackJsonWebHandler("/settings/access.json", [](AsyncWebServerRequest *request, JsonVariant &json) {
     Serial.println("POST /settings/access.json");
@@ -38,6 +38,14 @@ void WebServer_init()
     Serial.println("POST /settings/wifi.json");
     Settings_save(json.as<JsonObject>(), "wifi");
     Settings_load("wifi");
+    GPIO_blink(2, 10);
+    request->send(200);
+  }));
+
+  server.addHandler(new AsyncCallbackJsonWebHandler("/settings/telemetry.json", [](AsyncWebServerRequest *request, JsonVariant &json) {
+    Serial.println("POST /settings/telemetry.json");
+    Settings_save(json.as<JsonObject>(), "telemetry");
+    Settings_load("telemetry");
     GPIO_blink(2, 10);
     request->send(200);
   }));

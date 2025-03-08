@@ -3,11 +3,11 @@
 
 IPAddress APIP(192, 168, 66, 1); // Admin IP
 Ticker blinker;
-Ticker ntpFetcher;
+// Ticker ntpFetcher;
 
 void Wifi_init() {
   Serial.println("Initializing Wifi..");
-  Wifi_initNtp();
+  // Wifi_initNtp();
   Wifi_createAP();
 }
 
@@ -35,47 +35,47 @@ void Wifi_createAP() {
   }
 }
 
-long ntpRetryMs = 10*SECOND;
-void Wifi_initNtp() {
-    // The board itself does not have a CMOS clock.
-    // Getting accurate reading from NTP Server is important because
-    // access logs need a timestamp in order to be meaningful.
-    // Keep trying for 30 minutes (exponential backoff).
-  if (Wifi_connect() && Board_ntp()) {
-    WiFi.disconnect(true);
-  } else {
-    Serial.println("Error! Cannot connect for NTP time.");
-    GPIO_blink(GPIO_STATUS_LED, 5, 250);
-    if (ntpRetryMs < 15*MINUTE) {
-      Serial.printf("Retry in %d seconds...\n", ntpRetryMs/SECOND);
-      ntpFetcher.once_ms_scheduled(ntpRetryMs, Wifi_initNtp);
-      ntpRetryMs *= 2; // --> Exponential backoff
-    }
-  }
-}
+// long ntpRetryMs = 10*SECOND;
+// void Wifi_initNtp() {
+//     // The board itself does not have a CMOS clock.
+//     // Getting accurate reading from NTP Server is important because
+//     // access logs need a timestamp in order to be meaningful.
+//     // Keep trying for 30 minutes (exponential backoff).
+//   if (Wifi_connect() && Board_ntp()) {
+//     WiFi.disconnect(true);
+//   } else {
+//     Serial.println("Error! Cannot connect for NTP time.");
+//     GPIO_blink(GPIO_STATUS_LED, 5, 250);
+//     if (ntpRetryMs < 15*MINUTE) {
+//       Serial.printf("Retry in %d seconds...\n", ntpRetryMs/SECOND);
+//       ntpFetcher.once_ms_scheduled(ntpRetryMs, Wifi_initNtp);
+//       ntpRetryMs *= 2; // --> Exponential backoff
+//     }
+//   }
+// }
 
-boolean Wifi_connect() {
-  const char* ssid = setting_wifi_ssid.c_str();
-  const char* password = setting_wifi_password.c_str();
-  Serial.printf("Connecting to Wifi [%s] (using '%s')...\n", ssid, password);
-  WiFi.begin(ssid, password);
-  unsigned long start = millis(); 
-  bool blink = 0;
-  while (WiFi.status() != WL_CONNECTED) {
-    blink = !blink;
-    digitalWrite(GPIO_STATUS_LED, blink);
-    delay(200); Serial.print(".");
-    if (millis() - start > WIFI_CONN_MAX_WAIT) {
-      Serial.printf("\nUnable to connect over %d seconds.", WIFI_CONN_MAX_WAIT/SECOND);
-      break;
-    }
-  }
-  digitalWrite(GPIO_STATUS_LED, 0);
-  Serial.println();
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.print("Connected! IP address is: ");
-    Serial.println(WiFi.localIP());
-    return true;
-  }
-  return false;
-}
+// boolean Wifi_connect() {
+//   const char* ssid = setting_wifi_ssid.c_str();
+//   const char* password = setting_wifi_password.c_str();
+//   Serial.printf("Connecting to Wifi [%s] (using '%s')...\n", ssid, password);
+//   WiFi.begin(ssid, password);
+//   unsigned long start = millis(); 
+//   bool blink = 0;
+//   while (WiFi.status() != WL_CONNECTED) {
+//     blink = !blink;
+//     digitalWrite(GPIO_STATUS_LED, blink);
+//     delay(200); Serial.print(".");
+//     if (millis() - start > WIFI_CONN_MAX_WAIT) {
+//       Serial.printf("\nUnable to connect over %d seconds.", WIFI_CONN_MAX_WAIT/SECOND);
+//       break;
+//     }
+//   }
+//   digitalWrite(GPIO_STATUS_LED, 0);
+//   Serial.println();
+//   if (WiFi.status() == WL_CONNECTED) {
+//     Serial.print("Connected! IP address is: ");
+//     Serial.println(WiFi.localIP());
+//     return true;
+//   }
+//   return false;
+// }

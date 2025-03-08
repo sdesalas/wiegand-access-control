@@ -1,14 +1,3 @@
-#include <NTPClient.h>
-#include <WiFiUdp.h>
-
-#define NTP_SERVER "pool.ntp.org"
-
-WiFiUDP ntpUDP;
-NTPClient ntpClient(ntpUDP, NTP_SERVER);
-
-// number of seconds since January 1, 1970 GMT when board initializes.
-unsigned long timeOffset = 0;
-
 void Board_init() {
   Serial.begin(115200);
   ntpClient.begin();
@@ -40,24 +29,33 @@ void Board_init() {
   Serial.println("=================================");
 }
 
-bool Board_ntp() {
-  Serial.printf("Connecting to '%s'...\n", NTP_SERVER);
-  bool success = ntpClient.update();
-  if (success) {
-    // We keep track of `millis()` locally so we just need
-    // to save the offset using the NTP epoch time.
-    timeOffset = ntpClient.getEpochTime() - (millis() / 1000);
-    Serial.print("Current epoch time: ");
-    Serial.println(Board_getTime());
-  }
-  return success;
+#define MINUTE_IN_SECS 60
+#define HOUR_IN_SECS (60 * MINUTE_IN_SECS)
+#define DAY_IN_SECS (24 * HOUR_IN_SECS)
+
+String Board_getTime() {
+  unsigned long seconds = Board_seconds();
+  unsigned long d = (seconds / DAY_IN_SECS);
+  unsigned long h = (seconds % DAY_IN_SECS) / HOUR_IN_SECS;
+  String hh = h < 10 ? "0" + String(h) : String(h);
+  unsigned long m = (seconds % HOUR_IN_SECS) / MINUTE_IN_SECS;
+  String mm = m < 10 ? "0" + String(m) : String(m);
+  unsigned long s = (seconds % MINUTE_IN_SECS);
+  String ss = s < 10 ? "0" + String(s) : String (s);
+  return  String(d) + "T" + hh + ":" + mm + ":" + ss;
 }
 
-// UNIX epoch time (seconds since 1970-01-01 GMT)
-// FIXME: There is a problem in this function
-// because of the wrap-around nature of the
-// `millis()` function. After 2^32 milliseconds
-// the int32 overflows back to 0.
-unsigned long Board_getTime() {
-  return timeOffset + (millis() / 1000);
+// Seconds since the board was powered (up to 136 years).
+unsigned int Board_overflows = 0;
+unsigned long Board_lastMillis = 0;
+unsigned long Board_seconds() {
+  unsigned long ms = millis();
+  if (ms < Board_lastMillis) {
+    // NOTE: the `millis()` function result overflows and 
+    // wrap-arounds back to 0 after 2^32 milliseconds (49.7 days)
+    Board_overflows++;
+  }
+  Board_lastMillis = ms;
+  unsigned long offset = Board_overflows * ((2 << 32) / 1000);
+  return offset + (ms / 1000);
 }

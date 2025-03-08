@@ -1,6 +1,5 @@
 {
-  "enabled": true,
+  "master_key": "",
   "users": "",
-  "master_key_add": "",
-  "master_key_delete": ""
+  "swapdoors": false
 }

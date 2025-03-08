@@ -1,6 +1,5 @@
 {
-  "enabled": true,
-  "users": "123456:bob:34687623491\n987654:mary:3469879348",
-  "master_key_add": "34687623493",
-  "master_key_delete": "34687623498"
+  "master_key": "",
+  "users": "",
+  "swapdoors": false
 }

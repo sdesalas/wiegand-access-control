@@ -25,6 +25,7 @@
         <ul>
           <li :class="{ 'active': tab === 'access' }" @click="show('access')">Access</li>
           <li :class="{ 'active': tab === 'wifi' }" @click="show('wifi')">Wifi</li>
+          <li :class="{ 'active': tab === 'telemetry' }" @click="show('telemetry')">Telemetry</li>
           <li :class="{ 'active': tab === 'files' }" @click="show('files')">Files</li>
           <li :class="{ 'active': tab === 'reboot' }" @click="show('reboot')">Reboot</li>
         </ul>
@@ -34,22 +35,21 @@
         <fieldset>
           <legend data-tooltip="Enables door access." data-placement="right">Door Access:</legend>
           <label>
-            <input type="checkbox" name="enabled" checked x-model="data.enabled"/>
-            Enabled
-          </label>
-          <label>
-            Master Card (Add)
-            <input placeholder="Master Key (Add)" x-model="data.master_key_add"/>
-          </label>
-          <label>
-            Master Card (Remove)
-            <input placeholder="Master Key (Remove)" x-model="data.master_key_remove"/>
+            Master Key Card (10 digit ID)
+            <input placeholder="Master Key Card" x-model="data.master_key"/>
           </label>
         </fieldset>
         <fieldset>
           <legend data-tooltip="List of access keycards, one per line." >Users:</legend>
           <label>
             <textarea name="users" placeholder="users" x-model="data.users"></textarea>
+          </label>
+        </fieldset>
+        <fieldset>
+          <legend data-tooltip="Swap the inside and outside doors." data-placement="right">Swap Doors:</legend>
+          <label>
+            <input type="checkbox" name="swapdoors" checked x-model="data.swapdoors"/>
+            Enabled
           </label>
         </fieldset>
         <button @click.prevent="save($event.target)">Save</button>
@@ -69,12 +69,12 @@
             <input placeholder="AP password" x-model="data.ap_password"/>
           </label>
           <label>
-            <input type="checkbox" x-model="data.hidden"/>
+            <input type="checkbox" x-model="data.ap_hidden"/>
             AP Hidden
           </label>
         </fieldset>
         <fieldset>
-            <legend data-tooltip="Local Wifi router details, to connect to the internet" >Local Wifi:</legend>
+            <legend data-tooltip="Local Wifi router details." >Local Wifi:</legend>
             <label>
               SSID
               <input placeholder="ssid" x-model="data.ssid"/>
@@ -86,6 +86,49 @@
         </fieldset>
         <button @click.prevent="save($event.target)">Save</button>
         <br/>
+        <br/>
+      </form>
+      <!-- TELEMETRY -->
+      <form title="telemetry" x-data="settings($el.title)" @data="data = $event.detail">
+        <fieldset>
+          <legend>Connect to the internet, send data, and disconnect. <br/><i>(Works only if there are no connected clients)</i></legend>
+        </fieldset>
+        <fieldset>
+          <legend>Frequency:</legend>
+          <label>
+            <input type="radio" name="frequency" value="0" x-model.number="data.frequency"/>
+            Disabled
+          </label>
+          <label>
+            <input type="radio" name="frequency" value="1" x-model.number="data.frequency"/>
+            1 minute
+          </label>
+          <label>
+            <input type="radio" name="frequency" value="5" x-model.number="data.frequency"/>
+            5 minutes
+          </label>
+          <label>
+            <input type="radio" name="frequency" value="15" x-model.number="data.frequency"/>
+            15 minutes
+          </label>
+          <label>
+            <input type="radio" name="frequency" value="30" x-model.number="data.frequency"/>
+            30 minutes
+          </label>
+        </fieldset>
+        <fieldset>
+          <label>
+            PUT Url (https://accesscontrol/ssid/filename)
+            <input name="url" placeholder="https://accesscontrol/ssid" x-model="data.url"/>
+          </label>
+          <label>
+            Authorization (HTTP header)
+            <input name="header" placeholder="Authorization: Bearer abc123" x-model="data.header"/>
+          </label>
+        </fieldset>
+        <button @click.prevent="save($event.target)">Save</button>
+        <br/>
+        <p>⚠️ NOTE: Please reboot after saving to apply telemetry settings.</p>
         <br/>
       </form>
       <!-- FILES -->
@@ -122,13 +165,6 @@
       </form>
       <!-- REBOOT -->
       <form title="reboot" x-data="settings($el.title)" @data="data = $event.detail">
-        <fieldset>
-          <legend>OTA Updates:</legend>
-          <label>
-            <input type="checkbox" name="ota" />
-            Enabled
-          </label>
-        </fieldset>
         <fieldset>
           <label>
             Boot Key
@@ -201,9 +237,10 @@
       }
       function settings(file) {
         const settings = {
-          access: ['enabled', 'master_key_add', 'master_key_remove', 'users'],
-          wifi: ['ssid', 'password', 'hidden'],
-          reboot: ['ota', 'key']
+          access: ['master_key', 'users', 'swapdoors'],
+          telemetry: ['frequency', 'url', 'header'],
+          wifi: ['ap_ssid', 'ap_password', 'ap_hidden', 'ssid', 'password'],
+          reboot: ['key']
         }
         return {
           data: {},

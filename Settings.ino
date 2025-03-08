@@ -1,25 +1,33 @@
-#define SETTINGS_FILE_COUNT 1
+#define SETTINGS_FILE_COUNT 3
 #define SETTINGS_DEFAULTS_TEMPLATE "/defaults/#.json"
 #define SETTINGS_FILE_TEMPLATE  "/settings/#.json"
 
+// "access" options
+String setting_access_master_key = "";
+String setting_access_users = "";
+boolean setting_access_swapdoors = false;
 // "wifi" options
 String setting_wifi_ap_ssid = "";
 String setting_wifi_ap_password = "";
 boolean setting_wifi_ap_hidden = false;
 String setting_wifi_ssid = "";
 String setting_wifi_password = "";
+boolean setting_wifi_hidden = false;
+// "telemetry" options
+int setting_telemetry_frequency = 0;
+String setting_telemetry_url = "";
+String setting_telemetry_header = "";
 // "reboot" options 
-boolean setting_reboot_ota = false;
 String setting_reboot_key = "";
 
 void Settings_init() {
   // Initialize the settings
+  Settings_load("access");
   Settings_load("wifi");
+  Settings_load("telemetry");
   Settings_load("reboot");
-  Serial.print("The SSID is ");
-  Serial.println(setting_wifi_ssid);
   Serial.print("The AP SSID is ");
-  Serial.println(setting_wifi_ap_ssid);
+  Serial.println(setting_wifi_ssid);
 }
 
 void Settings_load(const char* file) {
@@ -27,6 +35,11 @@ void Settings_load(const char* file) {
     settingsPath.replace("#", file);
     JsonDocument doc = FS_readJson(settingsPath.c_str());
     JsonObject setting = doc.as<JsonObject>();
+    if (strcmp(file, "access") == 0) {
+      setting_access_master_key = setting["master_key"] | false;
+      setting_access_users = setting["users"] | "";
+      setting_access_swapdoors = setting["swapdoors"] | false;
+    }
     if (strcmp(file, "wifi") == 0) {
       setting_wifi_ap_ssid = setting["ap_ssid"] | "";
       setting_wifi_ap_password = setting["ap_password"] | "";
@@ -34,8 +47,12 @@ void Settings_load(const char* file) {
       setting_wifi_ssid = setting["ssid"] | "";
       setting_wifi_password = setting["password"] | "";
     }
+    if (strcmp(file, "telemetry") == 0) {
+      setting_telemetry_frequency = setting["frequency"] | 0;
+      setting_telemetry_url = setting["url"] | "";
+      setting_telemetry_header = setting["header"] | "";
+    }
     if (strcmp(file, "reboot") == 0) {
-      setting_reboot_ota = setting["ota"] | false;
       setting_reboot_key = setting["key"] | "";
     }
 }
@@ -56,7 +73,7 @@ bool Settings_save(JsonObjectConst input, const char* file) {
 }
 
 void Settings_reset() {
-  String files[SETTINGS_FILE_COUNT] = { "wifi" };
+  String files[SETTINGS_FILE_COUNT] = { "access", "wifi" , "telemetry", "reboot" };
   for (int i = 0; i < SETTINGS_FILE_COUNT; i++) {
     String defaultsPath = SETTINGS_DEFAULTS_TEMPLATE;
     String settingsPath = SETTINGS_FILE_TEMPLATE;
