@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="pico.classless.min.css" />
     <link rel="stylesheet" href="overrides.css"/>
     <style>
+      html { background: #eee; }
       form { display: none; }
     </style>
     <script src="alpine@2.8.2.min.js" defer></script>
@@ -20,7 +21,7 @@
   </head>
   <body>
     <main>
-      <p><img src="esp.jpg" style="display: block; width: 180px;"/></p>
+      <p><img src="idcard.jpg" style="display: block; width: fit-content;"/></p>
       <nav role="tab-control" x-data="nav()" x-init="show(location.hash || 'access')">
         <ul>
           <li :class="{ 'active': tab === 'access' }" @click="show('access')">Access</li>
@@ -33,14 +34,13 @@
       <!-- Access -->
       <form title="access" x-data="settings($el.title)" @data="data = $event.detail">
         <fieldset>
-          <legend data-tooltip="Enables door access." data-placement="right">Door Access:</legend>
+          <legend data-tooltip="If this is blank, the first card swiped will become the Master Key Card">Master Key Card (10 digits)</legend>
           <label>
-            Master Key Card (10 digit ID)
-            <input placeholder="Master Key Card" x-model="data.master_key"/>
+            <input placeholder="1234567890" x-model="data.master_key"/>
           </label>
         </fieldset>
         <fieldset>
-          <legend data-tooltip="List of access keycards, one per line." >Users:</legend>
+          <legend data-tooltip="List of 10-digit access keycards, one per line." >Users (one per line):</legend>
           <label>
             <textarea name="users" placeholder="users" x-model="data.users"></textarea>
           </label>
@@ -91,7 +91,7 @@
       <!-- TELEMETRY -->
       <form title="telemetry" x-data="settings($el.title)" @data="data = $event.detail">
         <fieldset>
-          <legend>Connect to the internet, send data, and disconnect. <br/><i>(Works only if there are no connected clients)</i></legend>
+          <legend>Sends access data. <br/><i>(Works only if connected to WiFi)</i></legend>
         </fieldset>
         <fieldset>
           <legend>Frequency:</legend>
@@ -118,12 +118,16 @@
         </fieldset>
         <fieldset>
           <label>
-            PUT Url (https://accesscontrol/ssid/filename)
-            <input name="url" placeholder="https://accesscontrol/ssid" x-model="data.url"/>
+            Url (https://accesscontrol/log)
+            <input name="url" placeholder="https://accesscontrol/log" x-model="data.url"/>
+          </label>
+          <label>
+            Method (ie POST or PUT)
+            <input name="method" placeholder="POST" x-model="data.method"/>
           </label>
           <label>
             Authorization (HTTP header)
-            <input name="header" placeholder="Authorization: Bearer abc123" x-model="data.header"/>
+            <input name="header" placeholder="Authorization: Bearer mytoken-abc-123" x-model="data.header"/>
           </label>
         </fieldset>
         <button @click.prevent="save($event.target)">Save</button>
