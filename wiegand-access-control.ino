@@ -3,7 +3,6 @@
 #include <FS.h>
 #include <Ticker.h>
 #include <ESP8266WiFi.h>
-#include "lib/WiegandMultiReader.h"
 
 #define SECOND 1000
 #define MINUTE (60 * SECOND)

@@ -1,4 +1,3 @@
-#define SETTINGS_FILE_COUNT 4
 #define SETTINGS_DEFAULTS_TEMPLATE "/defaults/#.json"
 #define SETTINGS_FILE_TEMPLATE  "/settings/#.json"
 

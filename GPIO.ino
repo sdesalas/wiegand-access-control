@@ -1,39 +1,32 @@
+#include "lib/WiegandMultiReader.h"
+
+// Board = ESP8266 NodeMCUv3
 
 #define GPIO_FACTORY_RESET 0 // "FLASH" pin
 #define GPIO_RESET_DELAY (5*SECOND) // Press for 5 secs before flashing
-#define GPIO_STATUS_LED 12 // (GPIO12 = D6)
+#define GPIO_STATUS_LED 2// D4 (Boot: High. Fails if pulled low)
+#define GPIO_STATUS_BUZZ 1// TX (Boot: High. Fails if pulled low)
 
-#define GPIO_READER1_D0 5 // (GPIO5 = D1)
-#define GPIO_READER1_D1 4 // (GPIO4 = D2)
-#define GPIO_READER1_LED 999 // (???)
-#define GPIO_READER1_DOOR 14 // (GPIO14 = D5)
+#define GPIO_READER1_D0 5 // D1
+#define GPIO_READER1_D1 4 // D2
+#define GPIO_READER1_DOOR 13 // D7
 
-#define GPIO_READER2_D0 5 // (GPIO5 = D1)
-#define GPIO_READER2_D1 4 // (GPIO4 = D2)
-#define GPIO_READER2_LED 999 // (???)
-#define GPIO_READER2_DOOR 14 // (GPIO14 = D5)
-
-// Interrupt signature depends on board type
-#if defined(ESP8266)
-  #define ISR ICACHE_RAM_ATTR
-#elif defined(ESP32)
-  #define ISR IRAM_ATTR
-#else
-  #define ISR
-#endif
+#define GPIO_READER2_D0 14 // D5
+#define GPIO_READER2_D1 12 // D6
+#define GPIO_READER2_DOOR 15 // D8
 
 Ticker resetCheck;
 Ticker readerCheck;
 
-WIEGAND cardReader1();
-void ISR cardReader1_D0() { cardReader1.ReadD0(); }
-void ISR cardReader1_D1() { cardReader1.ReadD1(); }
+WIEGAND cardReader1;
+void ICACHE_RAM_ATTR cardReader1_D0() { cardReader1.ReadD0(); }
+void ICACHE_RAM_ATTR cardReader1_D1() { cardReader1.ReadD1(); }
 
-WIEGAND cardReader2();
-void ISR cardReader2_D0() { cardReader2.ReadD0(); }
-void ISR cardReader2_D1() { cardReader2.ReadD1(); }
+WIEGAND cardReader2;
+void ICACHE_RAM_ATTR cardReader2_D0() { cardReader2.ReadD0(); }
+void ICACHE_RAM_ATTR cardReader2_D1() { cardReader2.ReadD1(); }
 
-void ISR GPIO_factoryReset() {
+void ICACHE_RAM_ATTR GPIO_factoryReset() {
   Serial.println("FLASH pin pressed.");
   // Check if still pressed 5 seconds later
   resetCheck.once_ms_scheduled(GPIO_RESET_DELAY, []() {
@@ -54,9 +47,9 @@ void ISR GPIO_factoryReset() {
 void GPIO_init() {
   Serial.println("GPIO_init()");
 
-  // Add status LED
+  // Add status LED / BUZ
   pinMode(GPIO_STATUS_LED, OUTPUT);
-  digitalWrite(GPIO_STATUS_LED, 0);
+  pinMode(GPIO_STATUS_BUZZ, OUTPUT);
 
   // Add reader 1
   pinMode(GPIO_READER1_D0, INPUT);
