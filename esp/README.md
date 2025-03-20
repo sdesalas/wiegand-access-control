@@ -17,8 +17,8 @@
 | 4        | D2      | Door 2 (Out) Opener | Relay SSR 5V                         |                       |
 | 0        | D3      | FLASH button        | Momentary Push button + 10k resistor |                       |
 | 2        | D4      | LED Onboard         |                                      | Debugging             |
-| 14       | D5      | READER1 D0          | 2K + 10K resistor                    | voltage divider       |
-| 12       | D6      | READER1 D1          | 2K + 10K resistor                    | voltage divider       |
-| 13       | D7      | READER2 D0          | 2K + 10K resistor                    | voltage divider       |
-| 15       | D8      | READER2 D1          | 2K + 10K resistor                    | voltage divider       |
+| 14       | D5      | READER1 D0 (green)  | 2K + 10K resistor                    | voltage divider       |
+| 12       | D6      | READER1 D1 (white)  | 2K + 10K resistor                    | voltage divider       |
+| 13       | D7      | READER2 D0 (green)  | 2K + 10K resistor                    | voltage divider       |
+| 15       | D8      | READER2 D1 (white)  | 2K + 10K resistor                    | voltage divider       |
 | 1        | TX      | Secondary LED/BUZ UX| Transistor 2N2222 + 10K resistor     | Door 2 feedback       |
