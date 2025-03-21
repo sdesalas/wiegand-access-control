@@ -22,6 +22,28 @@
  #else
  #include "WProgram.h"
  #endif
+
+ 
+/**** DEBUGGING *******************/
+ #define DEBUG 1
+ #if DEBUG
+  byte DEBUG_arr[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  int DEBUG_pos = 0;
+  int DEBUG_arrlen = 20;
+  #define DEBUG_output \
+      Serial.print("DEBUG_arr:"); \
+      for (int i = 0; i < DEBUG_arrlen; i++) { \
+        Serial.print(DEBUG_arr[i]); \
+        DEBUG_arr[i] = 0; \
+      } \
+      Serial.println(); \
+      DEBUG_pos = 0;
+  #define DEBUG_update(val) DEBUG_arr[DEBUG_pos++] = val;
+ #else
+  #define DEBUG_output
+  #define DEBUG_update(val)
+ #endif
+/***** DEBUGGING ******************/
  
  class WIEGAND {
    public:
@@ -79,9 +101,10 @@
    noInterrupts();
    ret=DoWiegandConversion();
    interrupts();
+   DEBUG_output;
    return ret;
  }
- 
+
  void WIEGAND::ReadD0 ()
  {
    _bitCount++;        // Increament bit count for Interrupt connected to D0
@@ -96,6 +119,8 @@
      _cardTemp <<= 1;    // D0 represent binary 0, so just left shift card data
    }
    _lastWiegand = millis();  // Keep track of last wiegand bit received
+
+   DEBUG_update(0);
  }
  
  void WIEGAND::ReadD1()
@@ -114,6 +139,8 @@
      _cardTemp <<= 1;    // left shift card data
    }
    _lastWiegand = millis();  // Keep track of last wiegand bit received
+
+   DEBUG_update(1);
  }
  
  unsigned long WIEGAND::GetCardId (volatile unsigned long *codehigh, volatile unsigned long *codelow, char bitlength)
