@@ -92,7 +92,7 @@ void Door::handle(unsigned long card) {
   if (!(card > 0)) return;
 
   // Prevent admin if door is not enabled
-  byte slot = Storage::find(card);
+  int slot = Storage::find(card);
   if (!isAdmin && slot == DOOR_MASTERCARD_ADD) return;
   if (!isAdmin && slot == DOOR_MASTERCARD_DELETE) return;
 

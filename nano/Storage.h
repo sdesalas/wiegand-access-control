@@ -16,34 +16,38 @@
 #ifndef _STORAGE_H_
 #define _STORAGE_H_
 
-#define STORAGE_START_ADDRESS 300 // This number < 800 should be rotated for reduced EEPROM wear.
+// Storage location in EEPROM
+// This number < 800 should be rotated for reduced wear.
+#define STORAGE_META_ADDRESS 300 
+#define STORAGE_START_ADDRESS (STORAGE_META_ADDRESS + 4)
 #define STORAGE_MAX_CARDS 32
 
 namespace Storage {
 
+  // metadata
   byte cards = 0;
   byte adminReader = 0;
   
   void init() {
-    cards = EEPROM.read(STORAGE_START_ADDRESS);
-    adminReader = EEPROM.read(STORAGE_START_ADDRESS + 1);
+    cards = EEPROM.read(STORAGE_META_ADDRESS);
+    adminReader = EEPROM.read(STORAGE_META_ADDRESS + 1);
   }
   
   void reset() {
     cards = 2;
-    EEPROM.write(STORAGE_START_ADDRESS, cards);
+    EEPROM.write(STORAGE_META_ADDRESS, cards);
   }
   
   void factoryReset() {
     cards = 0;
     adminReader = 0;
-    EEPROM.write(STORAGE_START_ADDRESS, cards);
-    EEPROM.write(STORAGE_START_ADDRESS + 1, adminReader);
+    EEPROM.write(STORAGE_META_ADDRESS, cards);
+    EEPROM.write(STORAGE_META_ADDRESS + 1, adminReader);
   }
   
   void setMasterReader(byte door) {
     adminReader = door;
-    EEPROM.write(STORAGE_START_ADDRESS + 1, adminReader);
+    EEPROM.write(STORAGE_META_ADDRESS + 1, adminReader);
   }
 
   /** Returns a 4-byte card number at slot */
@@ -51,7 +55,7 @@ namespace Storage {
     if (slot > cards) return 0;
   
     // read 4 bytes
-    int address = STORAGE_START_ADDRESS + 2 + (slot * 4);
+    int address = STORAGE_START_ADDRESS + (slot * 4);
     long b1 = EEPROM.read(slot);
     long b2 = EEPROM.read(slot + 1);
     long b3 = EEPROM.read(slot + 2);
@@ -62,7 +66,7 @@ namespace Storage {
   }
   
   /** Returns position of card in storage */
-  byte find(unsigned long card) {
+  int find(unsigned long card) {
     for(byte i = 0; i < STORAGE_MAX_CARDS; i++) {
       if (i >= cards) break; // no more cards
       if (read(i) == card) return i;
@@ -82,15 +86,14 @@ namespace Storage {
     byte b4 = ((card >> 24) & 0xFF);
   
     // Write to eeprom
-    int address = STORAGE_START_ADDRESS + 2 + (slot * 4);
+    int address = STORAGE_START_ADDRESS + (slot * 4);
     EEPROM.write(address, b1);
     EEPROM.write(address + 1, b2);
     EEPROM.write(address + 2, b3);
     EEPROM.write(address + 3, b4);
   
-    // We have one more card in memory
-    cards++;
-    EEPROM.write(STORAGE_START_ADDRESS, cards);
+    // We have one more card in storage
+    EEPROM.write(STORAGE_META_ADDRESS, ++cards);
     return true;
   }  
   
@@ -102,7 +105,24 @@ namespace Storage {
     return -1;
   }
 
-  bool remove(unsigned long card) {}
+  /** Removes a card, returns true if successful */
+  bool remove(unsigned long card) {
+    int slot = find(card);
+    if (slot < 0) return false;
+
+    // Find the location of the card then
+    // shift all bytes 4 positions to the left
+    // until we reach current number of cards.
+    int from = STORAGE_START_ADDRESS + (slot * 4);
+    int to = STORAGE_START_ADDRESS + (cards * 4);
+    for (int i = from; i < to; i++) {
+      EEPROM.write(EEPROM.read(i+4));
+    }
+
+    // We have one less card in storage
+    EEPROM.write(STORAGE_META_ADDRESS, --cards);
+    return true;
+  }
 
 }
 
