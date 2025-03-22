@@ -115,8 +115,8 @@ namespace Storage {
     // until we reach current number of cards.
     int from = STORAGE_START_ADDRESS + (slot * 4);
     int to = STORAGE_START_ADDRESS + (cards * 4);
-    for (int i = from; i < to; i++) {
-      EEPROM.write(EEPROM.read(i+4));
+    for (int address = from; address < to; address++) {
+      EEPROM.write(address, EEPROM.read(address+4));
     }
 
     // We have one less card in storage
