@@ -18,9 +18,9 @@
  #define _WIEGAND_MULTI_H_
  
  #if defined(ARDUINO) && ARDUINO >= 100
- #include "Arduino.h"
+  #include "Arduino.h"
  #else
- #include "WProgram.h"
+  #include "WProgram.h"
  #endif
 
  
@@ -61,7 +61,7 @@
      volatile unsigned long   _cardTempHigh;
      volatile unsigned long  _cardTemp;
      volatile unsigned long  _lastWiegand;
-     volatile int        _bitCount;  
+     volatile int        _bitCount;
      int       _wiegandType;
      unsigned long _code;
  };
@@ -82,7 +82,7 @@
    _cardTemp = 0;
    _code = 0;
    _wiegandType = 0;
-   _bitCount = 0;  
+   _bitCount = 0;
  }
  
  unsigned long WIEGAND::getCode()
@@ -255,5 +255,5 @@
    return false;
  }
  
- #endif
+#endif
  

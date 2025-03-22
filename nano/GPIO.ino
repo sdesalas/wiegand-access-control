@@ -1,19 +1,17 @@
 #include "PinChangeInterrupt.h"
 #include "WiegandMultiReader.h"
+#include "Door.h"
 
 #define GPIO_reader1_PIN_D0 7 // D7 GREEN "D0"
 #define GPIO_reader1_PIN_D1 8 // D8 WHITE "D1"
-#define GPIO_reader1_PIN_LED 3 // 
-#define GPIO_reader1_PIN_BUZ 4 // 
+#define GPIO_reader1_LED 3 // 
+#define GPIO_reader1_BUZ 4 // 
+#define GPIO_reader1_RELAY 5 // 
 
-WIEGAND GPIO_reader1;
+Door GPIO_door1(1);
 
-void GPIO_reader1_readD0() {
-  GPIO_reader1.ReadD0();
-}
-void GPIO_reader1_readD1() {
-  GPIO_reader1.ReadD1();
-}
+void GPIO_door1_ISR_D0() { GPIO_door1.reader.ReadD0(); }
+void GPIO_door1_ISR_D1() { GPIO_door1.reader.ReadD1(); }
 
 void GPIO_init() {
   Serial.begin(9600);
@@ -21,28 +19,22 @@ void GPIO_init() {
   delay(500);
   
   Serial.println("Starting GPIO..");
-  pinMode(GPIO_reader1_PIN_D0, INPUT);
-  pinMode(GPIO_reader1_PIN_D1, INPUT);
-  pinMode(GPIO_reader1_PIN_LED, OUTPUT);
-  digitalWrite(GPIO_reader1_PIN_LED, LOW);
-  
-  // Note that if connected properly, the wiegand device will run both input
-  // pins D0 and D1 as HIGH, so we want to capture falling voltages.
-  attachPCINT(digitalPinToPCINT(GPIO_reader1_PIN_D0), GPIO_reader1_readD0, FALLING);
-  attachPCINT(digitalPinToPCINT(GPIO_reader1_PIN_D1), GPIO_reader1_readD1, FALLING);
+  GPIO_door1.initInput(GPIO_reader1_PIN_D0, GPIO_reader1_PIN_D1, GPIO_door1_ISR_D0, GPIO_door1_ISR_D1);
+  GPIO_door1.initOutput(GPIO_reader1_LED, GPIO_reader1_BUZ, GPIO_reader1_RELAY);
   Serial.println("Ready for input..");
 }
 
-void GPIO_checkReaders() {
-  if(GPIO_reader1.available())
+unsigned long GPIO_checkReaders() {
+  if(GPIO_door1.reader.available())
   {
+    unsigned long code = GPIO_door1.reader.getCode();
     Serial.print("keypadReader WG HEX = ");
-    Serial.print(GPIO_reader1.getCode(),HEX);
+    Serial.print(code, HEX);
     Serial.print(", DECIMAL = ");
-    Serial.print(GPIO_reader1.getCode());
+    Serial.print(code);
     Serial.print(", Type W");
-    Serial.println(GPIO_reader1.getWiegandType());    
+    Serial.println(GPIO_door1.reader.getWiegandType());
+    Serial.println(); \
+    return code;
   }
-  // Status LEDs (=> ON if device connected properly)
-  digitalWrite(GPIO_reader1_PIN_LED, digitalRead(GPIO_reader1_PIN_D0) & digitalRead(GPIO_reader1_PIN_D1));
 }
