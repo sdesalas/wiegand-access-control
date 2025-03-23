@@ -11,5 +11,5 @@ void setup() {
 }
 
 void loop() {
-  GPIO_checkReaders();
+  GPIO_loop();
 }

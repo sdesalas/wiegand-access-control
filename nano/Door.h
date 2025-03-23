@@ -6,6 +6,7 @@
 
 #include "Constants.h"
 #include "lib/WiegandMultiReader.h"
+#include "lib/TinyScheduler.h"
 #include "PinChangeInterrupt.h"
 #include "Storage.h"
 #include "Arduino.h"
@@ -16,12 +17,16 @@
 #define DOOR_MASTERCARD_ADD 0 // (position in storage)
 #define DOOR_MASTERCARD_DELETE 1
 
+TinyScheduler scheduler = TinyScheduler::millis();
+
 class Door {
   public:
     Door(byte id);
     enum Mode { NORMAL, ADD, DELETE, RESET, INIT };
     void inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void));
     void outputs(byte LED, byte BUZ, byte RELAY);
+    void start();
+    void loop();
     void check();
     void handle(unsigned long card);
     void setMode(Mode m);
@@ -83,13 +88,26 @@ void Door::outputs(byte LED, byte BUZ, byte RELAY) {
   pinMode(RELAY, OUTPUT);
 }
 
+void Door::start() {
+  scheduler.every(500, [this]() {
+    check();
+  });
+}
+
+void Door::loop() {
+  scheduler.loop();
+}
+
 void Door::check() {
   // Status LEDs (=> Reader light GREEN/ON if device connected properly)
   digitalWrite(PIN_LED, digitalRead(PIN_D0) & digitalRead(PIN_D1));
+  Serial.println("Checking GPIO Door 1");
   if (reader.available()) {
     unsigned long card = reader.getCode();
+    Serial.print("Card detected = ");
+    Serial.println(card);
     handle(card);
-  }
+  }  
 }
 
 void Door::handle(unsigned long card) {
@@ -238,6 +256,15 @@ void Door::handle(unsigned long card) {
 }
 
 void Door::setMode(Mode m) {
+  Serial.print("setMode() -> ");
+  switch(m) {
+    case 0: Serial.println("NORMAL"); break;
+    case 1: Serial.println("ADD"); break;
+    case 2: Serial.println("DELETE"); break;
+    case 3: Serial.println("RESET"); break;
+    case 4: Serial.println("INIT"); break;
+  }
+  
   mode = m;
   modeStart = millis();
   switch(mode) {
@@ -251,14 +278,22 @@ void Door::setMode(Mode m) {
 }
 
 void Door::open() {
-  // Opens the door
+  digitalWrite(PIN_RELAY, 1);
+  scheduler.timeout(1000, [this](){
+    digitalWrite(PIN_RELAY, 0);
+  });
 }
 
 void Door::startFlashing() {}
 
 void Door::stopFlashing() {}
 
-void Door::shortBeep(byte count) {}
+void Door::shortBeep(byte count) {
+  digitalWrite(PIN_RELAY, 1);
+  scheduler.timeout(1000, [this](){
+    digitalWrite(PIN_RELAY, 0);
+  });
+}
 
 void Door::longBeep(byte count) {}
 
