@@ -289,12 +289,17 @@ void Door::startFlashing() {}
 void Door::stopFlashing() {}
 
 void Door::shortBeep(byte count) {
-  digitalWrite(PIN_RELAY, 1);
-  scheduler.timeout(1000, [this](){
-    digitalWrite(PIN_RELAY, 0);
+  digitalWrite(PIN_BUZ, 1);
+  scheduler.timeout(200, [this](){
+    digitalWrite(PIN_BUZ, 0);
   });
 }
 
-void Door::longBeep(byte count) {}
+void Door::longBeep(byte count) {
+  digitalWrite(PIN_BUZ, 1);
+  scheduler.timeout(1000, [this](){
+    digitalWrite(PIN_BUZ, 0);
+  });
+}
 
 #endif
