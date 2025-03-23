@@ -113,6 +113,7 @@ namespace Storage {
     // Find the location of the card then
     // shift all bytes 4 positions to the left
     // until we reach current number of cards.
+    // Worst case, this could take a few seconds.
     int from = STORAGE_START_ADDRESS + (slot * 4);
     int to = STORAGE_START_ADDRESS + (cards * 4);
     for (int address = from; address < to; address++) {

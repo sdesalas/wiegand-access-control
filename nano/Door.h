@@ -5,7 +5,8 @@
  */
 
 #include "Constants.h"
-#include "WiegandMultiReader.h"
+#include "lib/WiegandMultiReader.h"
+#include "PinChangeInterrupt.h"
 #include "Storage.h"
 #include "Arduino.h"
 
@@ -19,8 +20,8 @@ class Door {
   public:
     Door(byte id);
     enum Mode { NORMAL, ADD, DELETE, RESET, INIT };
-    void initInput(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void));
-    void initOutput(byte LED, byte BUZ, byte RELAY);
+    void inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void));
+    void outputs(byte LED, byte BUZ, byte RELAY);
     void check();
     void handle(unsigned long card);
     void setMode(Mode m);
@@ -30,6 +31,7 @@ class Door {
     void shortBeep(byte count);
     void longBeep(byte count);
     WIEGAND reader;
+    byte id;
     bool isAdmin;
     Mode mode;
     unsigned long modeStart;
@@ -41,6 +43,7 @@ class Door {
 };
 
 WIEGAND reader;
+byte ID;
 bool isAdmin = false;
 Door::Mode mode;
 unsigned long modeStart;
@@ -53,6 +56,7 @@ byte PIN_RELAY;
 Door::Door(byte id) {
   if (id == 0) return; // ERR
   // Check if door can do card admin
+  ID = id;
   if (Storage::adminReader == 0) {
     // No admin door means factory reset
     setMode(Mode::INIT);
@@ -61,7 +65,7 @@ Door::Door(byte id) {
   }
 }
 
-void Door::initInput(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void)) {
+void Door::inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void)) {
   PIN_D0 = D0;
   PIN_D1 = D1;
   pinMode(D0, INPUT);
@@ -70,7 +74,7 @@ void Door::initInput(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void))
   attachPCINT(digitalPinToPCINT(D1), ISR_D1, FALLING);
 }
 
-void Door::initOutput(byte LED, byte BUZ, byte RELAY) {
+void Door::outputs(byte LED, byte BUZ, byte RELAY) {
   PIN_LED = LED;
   PIN_BUZ = BUZ;
   PIN_RELAY = RELAY;
@@ -109,6 +113,7 @@ void Door::handle(unsigned long card) {
     case Mode::INIT: {
       Storage::save(card);
       if (Storage::cards >= 2) {
+        Storage::setMasterReader(ID);
         setMode(Mode::NORMAL);
         stopFlashing();
       }
@@ -177,7 +182,7 @@ void Door::handle(unsigned long card) {
     // - Master DELETE card:  -> Exits
     // 
     case Mode::DELETE: {
-      if (slot < 0) {
+      if (slot >= 0) {
         // Unknown card
         Storage::remove(card);
         shortBeep(1);
