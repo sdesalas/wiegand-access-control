@@ -25,7 +25,7 @@
 
  
 /**** DEBUGGING *******************/
- #define DEBUG 1
+ #define DEBUG 0
  #if DEBUG
   byte DEBUG_arr[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
   int DEBUG_pos = 0;

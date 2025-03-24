@@ -7,9 +7,9 @@
  */
 
 void setup() {
-  GPIO_init();
+  Door1_init();
 }
 
 void loop() {
-  GPIO_loop();
+  Door1_loop();
 }

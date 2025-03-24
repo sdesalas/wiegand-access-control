@@ -6,7 +6,6 @@
 
 #include "Constants.h"
 #include "lib/WiegandMultiReader.h"
-#include "lib/TinyScheduler.h"
 #include "PinChangeInterrupt.h"
 #include "Storage.h"
 #include "Arduino.h"
@@ -17,7 +16,10 @@
 #define DOOR_MASTERCARD_ADD 0 // (position in storage)
 #define DOOR_MASTERCARD_DELETE 1
 
-TinyScheduler scheduler = TinyScheduler::millis();
+struct DoorActions {
+  void(*startFlashing)(void);
+  void(*stopFlashing)(void);
+};
 
 class Door {
   public:
@@ -26,7 +28,6 @@ class Door {
     void inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void));
     void outputs(byte LED, byte BUZ, byte RELAY);
     void start();
-    void loop();
     void check();
     void handle(unsigned long card);
     void setMode(Mode m);
@@ -35,8 +36,10 @@ class Door {
     void stopFlashing();
     void shortBeep(byte count);
     void longBeep(byte count);
+    void beep(byte count, unsigned int duration);
     WIEGAND reader;
     byte id;
+    bool isConnected;
     bool isAdmin;
     Mode mode;
     unsigned long modeStart;
@@ -45,10 +48,12 @@ class Door {
     byte PIN_LED;
     byte PIN_BUZ;
     byte PIN_RELAY;
+    DoorActions *actions;
 };
 
 WIEGAND reader;
 byte ID;
+bool isConnected = false;
 bool isAdmin = false;
 Door::Mode mode;
 unsigned long modeStart;
@@ -57,17 +62,13 @@ byte PIN_D1;
 byte PIN_LED;
 byte PIN_BUZ;
 byte PIN_RELAY;
+DoorActions *actions;
 
 Door::Door(byte id) {
   if (id == 0) return; // ERR
-  // Check if door can do card admin
   ID = id;
-  if (Storage::adminReader == 0) {
-    // No admin door means factory reset
-    setMode(Mode::INIT);
-  } else {
-    isAdmin = Storage::adminReader == id;
-  }
+  actions->startFlashing = []() {};
+  actions->stopFlashing = []() {};
 }
 
 void Door::inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void)) {
@@ -75,6 +76,7 @@ void Door::inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void)) {
   PIN_D1 = D1;
   pinMode(D0, INPUT);
   pinMode(D1, INPUT);
+  isConnected = digitalRead(PIN_D0) & digitalRead(PIN_D1);
   attachPCINT(digitalPinToPCINT(D0), ISR_D0, FALLING);
   attachPCINT(digitalPinToPCINT(D1), ISR_D1, FALLING);
 }
@@ -89,32 +91,34 @@ void Door::outputs(byte LED, byte BUZ, byte RELAY) {
 }
 
 void Door::start() {
-  scheduler.every(500, [this]() {
-    check();
-  });
-}
-
-void Door::loop() {
-  scheduler.loop();
+  // Check if door can do card admin
+  if (Storage::adminReader == 0) {
+    // No admin door means factory reset
+    setMode(Mode::INIT);
+  } else {
+    isAdmin = Storage::adminReader == ID;
+  }
 }
 
 void Door::check() {
   // Status LEDs (=> Reader light GREEN/ON if device connected properly)
-  digitalWrite(PIN_LED, digitalRead(PIN_D0) & digitalRead(PIN_D1));
-  Serial.println("Checking GPIO Door 1");
+  isConnected = digitalRead(PIN_D0) & digitalRead(PIN_D1);
+  if (mode != Mode::INIT) digitalWrite(PIN_LED, isConnected);
+  // Serial.println("Checking GPIO Door 1");
   if (reader.available()) {
-    unsigned long card = reader.getCode();
-    Serial.print("Card detected = ");
-    Serial.println(card);
-    handle(card);
-  }  
+    handle(reader.getCode());
+  }
 }
 
 void Door::handle(unsigned long card) {
+  Serial.print("Door::handle() -> ");
+  Serial.println(card);
   if (!(card > 0)) return;
 
   // Prevent admin if door is not enabled
   int slot = Storage::find(card);
+  Serial.print("slot is -> ");
+  Serial.println(slot);
   if (!isAdmin && slot == DOOR_MASTERCARD_ADD) return;
   if (!isAdmin && slot == DOOR_MASTERCARD_DELETE) return;
 
@@ -130,7 +134,9 @@ void Door::handle(unsigned long card) {
     //
     case Mode::INIT: {
       Storage::save(card);
+      if (Storage::cards == 1) Serial.println("Master ADD Saved!");
       if (Storage::cards >= 2) {
+        Serial.println("Master DELETE Saved!");
         Storage::setMasterReader(ID);
         setMode(Mode::NORMAL);
         stopFlashing();
@@ -256,7 +262,7 @@ void Door::handle(unsigned long card) {
 }
 
 void Door::setMode(Mode m) {
-  Serial.print("setMode() -> ");
+  Serial.print("Door::setMode() -> ");
   switch(m) {
     case 0: Serial.println("NORMAL"); break;
     case 1: Serial.println("ADD"); break;
@@ -278,28 +284,34 @@ void Door::setMode(Mode m) {
 }
 
 void Door::open() {
-  digitalWrite(PIN_RELAY, 1);
-  scheduler.timeout(1000, [this](){
-    digitalWrite(PIN_RELAY, 0);
-  });
+  digitalWrite(PIN_RELAY, HIGH);
+  delay(1*SECOND);
+  digitalWrite(PIN_RELAY, LOW);
 }
 
-void Door::startFlashing() {}
+void Door::startFlashing() {
+  actions->startFlashing();  
+}
 
-void Door::stopFlashing() {}
+void Door::stopFlashing() {
+  actions->stopFlashing();
+}
 
 void Door::shortBeep(byte count) {
-  digitalWrite(PIN_BUZ, 1);
-  scheduler.timeout(200, [this](){
-    digitalWrite(PIN_BUZ, 0);
-  });
+  beep(count, 200*MS);
 }
 
 void Door::longBeep(byte count) {
-  digitalWrite(PIN_BUZ, 1);
-  scheduler.timeout(1000, [this](){
-    digitalWrite(PIN_BUZ, 0);
-  });
+  beep(count, 1*SECOND);
+}
+
+void Door::beep(byte count, unsigned int duration) {
+  while(count-- > 0) {
+    digitalWrite(PIN_BUZ, HIGH);
+    delay(duration);
+    digitalWrite(PIN_BUZ, LOW);
+    if (count > 0) delay(duration);
+  }  
 }
 
 #endif

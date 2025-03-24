@@ -67,15 +67,25 @@ namespace Storage {
   
   /** Returns position of card in storage */
   int find(unsigned long card) {
+    Serial.print("Storage::find() -> ");
+    Serial.println(card);
     for(byte i = 0; i < STORAGE_MAX_CARDS; i++) {
       if (i >= cards) break; // no more cards
-      if (read(i) == card) return i;
+      unsigned long slot = read(i);
+      Serial.print(i);
+      Serial.print(" -> ");
+      Serial.println(slot);
+      if (slot == card) return i;
     }
     return -1;
   }
 
   /** Writes a card number at a specified slot */
   bool write(byte slot, unsigned long card) {
+    Serial.print("Storage::write() slot -> ");
+    Serial.print(slot);
+    Serial.print(" => ");
+    Serial.println(card);
     // check the limit
     if (slot > STORAGE_MAX_CARDS) return false;
   
