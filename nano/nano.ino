@@ -5,8 +5,13 @@
  * ATMega328P Arduino Nano microcontroller
  * 
  */
+#include "Storage.h"
 
 void setup() {
+  Serial.begin(9600);
+  Serial.println();
+  delay(500);
+  Storage::init();
   Door1_init();
 }
 

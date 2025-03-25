@@ -16,7 +16,7 @@
 #define DOOR_MASTERCARD_ADD 0 // (position in storage)
 #define DOOR_MASTERCARD_DELETE 1
 
-struct DoorActions {
+struct DoorEvents {
   void(*startFlashing)(void);
   void(*stopFlashing)(void);
 };
@@ -31,44 +31,52 @@ class Door {
     void check();
     void handle(unsigned long card);
     void setMode(Mode m);
+    void flash();
+    void flash(byte onOff);
     void open();
-    void startFlashing();
+    void startFlashing(unsigned int interval = 500);
     void stopFlashing();
-    void shortBeep(byte count);
-    void longBeep(byte count);
+    void fastBeep(byte count = 1);
+    void shortBeep(byte count = 1);
+    void mediumBeep(byte count = 1);
+    void longBeep(byte count = 1);
     void beep(byte count, unsigned int duration);
     WIEGAND reader;
     byte id;
     bool isConnected;
     bool isAdmin;
+    byte flashOnOff;
     Mode mode;
     unsigned long modeStart;
+    unsigned int flashingInterval;
     byte PIN_D0;
     byte PIN_D1;
     byte PIN_LED;
     byte PIN_BUZ;
     byte PIN_RELAY;
-    DoorActions *actions;
+    DoorEvents *on;
 };
 
 WIEGAND reader;
 byte ID;
 bool isConnected = false;
 bool isAdmin = false;
+byte flashOnOff = 0;
 Door::Mode mode;
 unsigned long modeStart;
+unsigned int flashingInterval;
 byte PIN_D0;
 byte PIN_D1;
 byte PIN_LED;
 byte PIN_BUZ;
 byte PIN_RELAY;
-DoorActions *actions;
+DoorEvents *on;
 
 Door::Door(byte id) {
   if (id == 0) return; // ERR
   ID = id;
-  actions->startFlashing = []() {};
-  actions->stopFlashing = []() {};
+  on->startFlashing = []() {};
+  on->stopFlashing = []() {};
 }
 
 void Door::inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void)) {
@@ -97,13 +105,14 @@ void Door::start() {
     setMode(Mode::INIT);
   } else {
     isAdmin = Storage::adminReader == ID;
+    setMode(Mode::NORMAL);
   }
 }
 
 void Door::check() {
   // Status LEDs (=> Reader light GREEN/ON if device connected properly)
   isConnected = digitalRead(PIN_D0) & digitalRead(PIN_D1);
-  if (mode != Mode::INIT) digitalWrite(PIN_LED, isConnected);
+  if (mode == Mode::NORMAL) digitalWrite(PIN_LED, isConnected);
   // Serial.println("Checking GPIO Door 1");
   if (reader.available()) {
     handle(reader.getCode());
@@ -133,13 +142,18 @@ void Door::handle(unsigned long card) {
     // - The 2nd card is the `Master DELETE` card
     //
     case Mode::INIT: {
-      Storage::save(card);
-      if (Storage::cards == 1) Serial.println("Master ADD Saved!");
-      if (Storage::cards >= 2) {
-        Serial.println("Master DELETE Saved!");
-        Storage::setMasterReader(ID);
-        setMode(Mode::NORMAL);
-        stopFlashing();
+      if (slot == -1) {
+        Storage::save(card);
+        if (Storage::cards == 1) Serial.println("Master ADD Saved!");
+        if (Storage::cards >= 2) {
+          Serial.println("Master DELETE Saved!");
+          Storage::setMasterReader(ID);
+          setMode(Mode::NORMAL);
+          fastBeep(2);
+          stopFlashing();
+        }
+      } else {
+        longBeep();
       }
       return;
     }
@@ -156,17 +170,16 @@ void Door::handle(unsigned long card) {
     case Mode::NORMAL: {
       if (slot < 0) {
         // Unknown card
-        longBeep(1);
         return;
       }
       else if (isAdmin && slot == DOOR_MASTERCARD_ADD) {
         setMode(Mode::ADD);
-        shortBeep(1);
+        fastBeep(2);
         return;
       }
       else if (isAdmin && slot == DOOR_MASTERCARD_DELETE) {
         setMode(Mode::DELETE);
-        shortBeep(1);
+        fastBeep(2);
         return;
       }
       else 
@@ -187,11 +200,11 @@ void Door::handle(unsigned long card) {
       if (slot < 0) {
         // Unknown card
         Storage::save(card);
-        shortBeep(1);
+        fastBeep();
         return;
       } else if (slot == DOOR_MASTERCARD_ADD) {
         setMode(Mode::NORMAL);
-        shortBeep(3);
+        fastBeep(2);
         return;
       }
     }
@@ -206,24 +219,26 @@ void Door::handle(unsigned long card) {
     // - Master DELETE card:  -> Exits
     // 
     case Mode::DELETE: {
-      if (slot >= 0) {
-        // Unknown card
-        Storage::remove(card);
-        shortBeep(1);
-        return;
+      if (slot == DOOR_MASTERCARD_ADD) {
+        // Do nothing
       } else if (slot == DOOR_MASTERCARD_DELETE) {
         if (millis() - modeStart < 5 * SECOND) {
           // Double tap -> RESET
           setMode(Mode::RESET);
           Storage::reset();
-          shortBeep(5);
+          fastBeep(5);
           return;
         } else {
           // Normal tap -> EXIT
           setMode(Mode::NORMAL);
-          shortBeep(3);
+          fastBeep(2);
           return;
         }
+      } else if (slot >= 0) {
+        // Known card
+        Storage::remove(card);
+        shortBeep();
+        return;
       }
     }
 
@@ -237,18 +252,12 @@ void Door::handle(unsigned long card) {
     // - Master DELETE card:  -> Exits
     // 
     case Mode::RESET: {
-      if (slot < 0) {
-        // Unknown card
-        Storage::save(card);
-        shortBeep(1);
-        return;
-      } else if (slot == DOOR_MASTERCARD_DELETE) {
+      if (slot == DOOR_MASTERCARD_DELETE) {
         if (millis() - modeStart < 5 * SECOND) {
           // Triple tap -> FACTORY RESET
-          Storage::reset();
           Storage::factoryReset();
           shortBeep(10);
-          setMode(Mode::NORMAL);
+          setMode(Mode::INIT);
           return;
         } else {
           // Normal tap -> EXIT
@@ -256,6 +265,11 @@ void Door::handle(unsigned long card) {
           setMode(Mode::NORMAL);
           return;
         }
+      } else if (slot < 0) {
+        // Unknown card
+        Storage::save(card);
+        shortBeep();
+        return;
       }
     }
   }
@@ -277,31 +291,58 @@ void Door::setMode(Mode m) {
     case Mode::NORMAL:
       stopFlashing();
       return;
-    default:
-      startFlashing();
+    case Mode::DELETE:
+      startFlashing(250);
       return;
+    case Mode::RESET:
+      startFlashing(50);
+      return;
+    default:
+      startFlashing(500);
+      return;
+  }
+}
+
+void Door::flash() {
+  flash(flashOnOff ? 0 : 1);
+}
+
+void Door::flash(byte onOff) {
+  if (isConnected) {
+    digitalWrite(PIN_LED, flashOnOff = onOff); 
+  } else {
+    digitalWrite(PIN_LED, LOW);
   }
 }
 
 void Door::open() {
   digitalWrite(PIN_RELAY, HIGH);
-  delay(1*SECOND);
+  delay(2*SECOND);
   digitalWrite(PIN_RELAY, LOW);
 }
 
-void Door::startFlashing() {
-  actions->startFlashing();  
+void Door::startFlashing(unsigned int interval = 500) {
+  flashingInterval = interval;
+  on->startFlashing();  
 }
 
 void Door::stopFlashing() {
-  actions->stopFlashing();
+  on->stopFlashing();
 }
 
-void Door::shortBeep(byte count) {
-  beep(count, 200*MS);
+void Door::fastBeep(byte count = 1) {
+  beep(count, 50*MS);
 }
 
-void Door::longBeep(byte count) {
+void Door::shortBeep(byte count = 1) {
+  beep(count, 100*MS);
+}
+
+void Door::mediumBeep(byte count = 1) {
+  beep(count, 400*MS);
+}
+
+void Door::longBeep(byte count = 1) {
   beep(count, 1*SECOND);
 }
 

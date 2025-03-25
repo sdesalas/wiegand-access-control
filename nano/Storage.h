@@ -16,6 +16,8 @@
 #ifndef _STORAGE_H_
 #define _STORAGE_H_
 
+#define DEBUG 1
+
 // Storage location in EEPROM
 // This number < 800 should be rotated for reduced wear.
 #define STORAGE_META_ADDRESS 300 
@@ -27,11 +29,6 @@ namespace Storage {
   // metadata
   byte cards = 0;
   byte adminReader = 0;
-  
-  void init() {
-    cards = EEPROM.read(STORAGE_META_ADDRESS);
-    adminReader = EEPROM.read(STORAGE_META_ADDRESS + 1);
-  }
   
   void reset() {
     cards = 2;
@@ -56,25 +53,41 @@ namespace Storage {
   
     // read 4 bytes
     int address = STORAGE_START_ADDRESS + (slot * 4);
-    long b1 = EEPROM.read(slot);
-    long b2 = EEPROM.read(slot + 1);
-    long b3 = EEPROM.read(slot + 2);
-    long b4 = EEPROM.read(slot + 3);
+    long b1 = EEPROM.read(address);
+    long b2 = EEPROM.read(address + 1);
+    long b3 = EEPROM.read(address + 2);
+    long b4 = EEPROM.read(address + 3);
     
     // 4 bytes -> unsigned long
     return ((b1 << 0) & 0xFF) + ((b2 << 8) & 0xFFFF) + ((b3 << 16) & 0xFFFFFF) + ((b4 << 24) & 0xFFFFFFFF);
   }
+
+  void init() {
+    cards = EEPROM.read(STORAGE_META_ADDRESS);
+    adminReader = EEPROM.read(STORAGE_META_ADDRESS + 1);
+    #if DEBUG
+    Serial.print("Storage::cards "); Serial.println(cards);
+    Serial.print("Storage::adminReader "); Serial.println(adminReader);
+    for (byte i = 0; i < cards; i++) {
+      Serial.print("Card@"); Serial.print(i); Serial.print(":"); Serial.println(read(i));
+    }
+    #endif
+  }
   
   /** Returns position of card in storage */
   int find(unsigned long card) {
+    #if DEBUG
     Serial.print("Storage::find() -> ");
     Serial.println(card);
+    #endif
     for(byte i = 0; i < STORAGE_MAX_CARDS; i++) {
       if (i >= cards) break; // no more cards
       unsigned long slot = read(i);
+      #if DEBUG
       Serial.print(i);
       Serial.print(" -> ");
       Serial.println(slot);
+      #endif
       if (slot == card) return i;
     }
     return -1;
@@ -82,10 +95,12 @@ namespace Storage {
 
   /** Writes a card number at a specified slot */
   bool write(byte slot, unsigned long card) {
-    Serial.print("Storage::write() slot -> ");
+    #if DEBUG
+    Serial.print("Storage::write() ");
     Serial.print(slot);
     Serial.print(" => ");
     Serial.println(card);
+    #endif
     // check the limit
     if (slot > STORAGE_MAX_CARDS) return false;
   
@@ -101,6 +116,13 @@ namespace Storage {
     EEPROM.write(address + 1, b2);
     EEPROM.write(address + 2, b3);
     EEPROM.write(address + 3, b4);
+
+    #if DEBUG
+    Serial.print(address); Serial.print(" => "); Serial.println(b1);
+    Serial.print(address + 1); Serial.print(" => "); Serial.println(b2);
+    Serial.print(address + 2); Serial.print(" => "); Serial.println(b3);
+    Serial.print(address + 3); Serial.print(" => "); Serial.println(b4);
+    #endif
   
     // We have one more card in storage
     EEPROM.write(STORAGE_META_ADDRESS, ++cards);
@@ -117,6 +139,10 @@ namespace Storage {
 
   /** Removes a card, returns true if successful */
   bool remove(unsigned long card) {
+    #if DEBUG
+    Serial.print("Storage::remove() ");
+    Serial.println(card);
+    #endif
     int slot = find(card);
     if (slot < 0) return false;
 

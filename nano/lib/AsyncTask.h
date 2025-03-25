@@ -10,12 +10,12 @@ class AsyncTask {
  
    // Struct for a single task
    struct Task {
-    unsigned int id;          // Unique task ID
-     void (*callback)();      // Pointer to a function
-     TaskMode mode;           // Task mode: ONCE or REPEAT
-     unsigned long lastRun;   // Timestamp of the last execution
-     unsigned long interval;  // Time gap between runs (ms)
-     Task* next;              // Pointer to the next task
+    unsigned int id;         // Unique task ID
+    void (*callback)();      // Pointer to a function
+    TaskMode mode;           // Task mode: ONCE or REPEAT
+    unsigned long lastRun;   // Timestamp of the last execution
+    unsigned long interval;  // Time gap between runs (ms)
+    Task* next;              // Pointer to the next task
    };
  
    // Define a type alias for the callback function pointer
