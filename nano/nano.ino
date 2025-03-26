@@ -7,6 +7,8 @@
  */
 #include "Storage.h"
 
+void(* reboot) (void) = 0; //declare reset function @ address 0
+
 void setup() {
   Serial.begin(9600);
   Serial.println();

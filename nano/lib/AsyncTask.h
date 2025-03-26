@@ -72,7 +72,7 @@ unsigned int AsyncTask::addTask(Callback callback, TaskMode mode, unsigned long 
   newTask->id = nextId++;  // Assign and increment the ID
   newTask->callback = callback;
   newTask->mode = mode;
-  newTask->lastRun = 0;
+  newTask->lastRun = millis();
   newTask->interval = interval;
   newTask->next = nullptr;
   if (this->taskList ==
@@ -91,6 +91,8 @@ unsigned int AsyncTask::addTask(Callback callback, TaskMode mode, unsigned long 
 
 // Method to remove a task by id
 void AsyncTask::remove(unsigned int id) {
+  Serial.println("AsyncTask::remove()");
+  Serial.println(id);
   Task *current = this->taskList;
   Task *previous = nullptr;
 
@@ -117,11 +119,15 @@ void AsyncTask::loop() {
   while (current != nullptr) {
     // Check if it's time to run the task
     if (currentTime - current->lastRun >= current->interval) {
+      Serial.print("current->callback() on task ");
+      Serial.println(current->id);
       current->callback();             // Execute the callback
       current->lastRun = currentTime;  // Update last run time
 
       // Check if the task is ONCE and should be removed
       if (current->mode == ONCE) {
+        Serial.println("Task is ONCE");
+        Serial.println(current->id);
         Task *toDelete = current;
         current = current->next;         // Move to next task
         this->remove(toDelete->id);  // Remove the task

@@ -6,6 +6,7 @@
 
 #include "Constants.h"
 #include "lib/WiegandMultiReader.h"
+#include "lib/AsyncTask.h"
 #include "PinChangeInterrupt.h"
 #include "Storage.h"
 #include "Arduino.h"
@@ -13,22 +14,22 @@
 #ifndef _DOOR_H_
 #define _DOOR_H_
 
+#define DOOR_MAX_COUNT 4
+#define DOOR_ADMIN_TIMEOUT (20 * SECOND)
 #define DOOR_MASTERCARD_ADD 0 // (position in storage)
 #define DOOR_MASTERCARD_DELETE 1
-
-struct DoorEvents {
-  void(*startFlashing)(void);
-  void(*stopFlashing)(void);
-};
 
 class Door {
   public:
     Door(byte id);
+    static void checkFlashing();
+    static void checkExitAdmin();
+    static Door *all[DOOR_MAX_COUNT];
     enum Mode { NORMAL, ADD, DELETE, RESET, INIT };
     void inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void));
     void outputs(byte LED, byte BUZ, byte RELAY);
     void start();
-    void check();
+    void loop();
     void handle(unsigned long card);
     void setMode(Mode m);
     void flash();
@@ -41,41 +42,75 @@ class Door {
     void longBeep(byte count = 1);
     void beep(byte count, unsigned int duration);
     WIEGAND reader;
+    Mode mode;
+    AsyncTask tasks;
     byte id;
     bool isConnected;
     bool isAdmin;
-    byte flashOnOff;
-    Mode mode;
+    bool isFlashing = false;
     unsigned long modeStart;
-    unsigned int flashingInterval;
+    unsigned int flashingTaskId;
+    unsigned int checkAdminTaskId;
     byte PIN_D0;
     byte PIN_D1;
     byte PIN_LED;
     byte PIN_BUZ;
     byte PIN_RELAY;
-    DoorEvents *on;
 };
 
 WIEGAND reader;
+Door *Door::all[DOOR_MAX_COUNT];
+Door::Mode mode;
+AsyncTask tasks;
 byte ID;
 bool isConnected = false;
 bool isAdmin = false;
-byte flashOnOff = 0;
-Door::Mode mode;
+bool isFlashing = false;
+byte flashBit = 0;
 unsigned long modeStart;
-unsigned int flashingInterval;
+unsigned int flashingTaskId;
+unsigned int checkAdminTaskId;
 byte PIN_D0;
 byte PIN_D1;
 byte PIN_LED;
 byte PIN_BUZ;
 byte PIN_RELAY;
-DoorEvents *on;
+
+void Door::checkFlashing() {
+  Serial.println("Door::checkFlashing()");
+  for (byte i = 0; i < DOOR_MAX_COUNT; i++) {
+    Door *door = Door::all[i];
+    if (door && door->flashingTaskId > 0) {
+      door->flash();
+      return;
+    }
+  }
+}
+
+void Door::checkExitAdmin() {
+  Serial.println("Door::checkExitAdmin()");
+  for (byte i = 0; i < DOOR_MAX_COUNT; i++) {
+    Door *door = Door::all[i];
+    if (door && door->isAdmin && door->checkAdminTaskId > 0) {
+      Serial.println(door->checkAdminTaskId);
+      door->checkAdminTaskId = 0;
+      if (door->isFlashing) {
+        door->stopFlashing();
+        door->setMode(Mode::NORMAL);
+      }
+      return;
+    }
+  }
+}
 
 Door::Door(byte id) {
-  if (id == 0) return; // ERR
   ID = id;
-  on->startFlashing = []() {};
-  on->stopFlashing = []() {};
+  for (byte i = 0; i < DOOR_MAX_COUNT; i++) {
+    if (Door::all[i] == NULL) {
+      Door::all[i] = this;
+      break;
+    }
+  }  
 }
 
 void Door::inputs(byte D0, byte D1, void(*ISR_D0)(void), void(*ISR_D1)(void)) {
@@ -108,13 +143,17 @@ void Door::start() {
   }
 }
 
-void Door::check() {
+void Door::loop() {
   // Status LEDs (=> Reader light GREEN/ON if device connected properly)
   isConnected = digitalRead(PIN_D0) & digitalRead(PIN_D1);
   if (mode == Mode::NORMAL) digitalWrite(PIN_LED, isConnected);
-  // Serial.println("Checking GPIO Door 1");
   if (reader.available()) {
     handle(reader.getCode());
+  }
+  // Task scheduler has lower priority
+  // run *after* handling card checks.
+  if (millis() % 4 == 0) {
+    tasks.loop();
   }
 }
 
@@ -153,6 +192,7 @@ void Door::handle(unsigned long card) {
           setMode(Mode::NORMAL);
           shortBeep(2);
           stopFlashing();
+          reboot();
         }
       } else {
         longBeep();
@@ -194,9 +234,8 @@ void Door::handle(unsigned long card) {
     //
     // Adds tapped ID cards.
     //
-    // - Card known:          Nothing
     // - Card unknown:        Adds to storage + EXITs
-    // - Master ADD card:     -> Just EXITs
+    // - Card known:          -> Just EXITs
     // 
     case Mode::ADD: {
       if (slot < 0) {
@@ -205,12 +244,13 @@ void Door::handle(unsigned long card) {
         shortBeep(2);
         setMode(Mode::NORMAL);
         return;
-      } else if (slot == DOOR_MASTERCARD_ADD) {
-        // Master card -> JUST EXIT
+      } else {
+        // Otherwise -> JUST EXIT
         shortBeep(1);
         setMode(Mode::NORMAL);
         return;
       }
+      return;
     }
 
     // DELETE MODE
@@ -218,33 +258,33 @@ void Door::handle(unsigned long card) {
     // Deletes tapped ID cards.
     //
     // - Card known:          Removes from storage + EXITs
-    // - Card unknown:        Nothing
     // - Double-tap:          -> RESET MODE (Clears known ID cards, except for Master ADD/DELETE)
+    // - Master ADD card:     -> Do nothing
     // - Master DELETE card:  -> Just EXITs
+    // - Card unkown          -> Just EXITs
     // 
     case Mode::DELETE: {
       if (slot == DOOR_MASTERCARD_ADD) {
         // Do nothing
-      } else if (slot == DOOR_MASTERCARD_DELETE) {
-        if (millis() - modeStart < 5 * SECOND) {
-          // Double tap -> RESET
-          shortBeep(5);
-          Storage::reset();
-          setMode(Mode::RESET);
-          return;
-        } else {
-          // Normal tap -> JUST EXIT
-          shortBeep(2);
-          setMode(Mode::NORMAL);
-          return;
-        }
+      } else if (slot == DOOR_MASTERCARD_DELETE && millis() - modeStart < 5 * SECOND) {
+        // Double tap -> RESET
+        shortBeep(5);
+        Storage::reset();
+        setMode(Mode::RESET);
+        return;
       } else if (slot >= 0) {
         // Known card -> REMOVE + EXIT
         Storage::remove(card);
         shortBeep(2);
         setMode(Mode::NORMAL);
         return;
+      } else {
+        // Otherwise -> JUST EXIT
+        shortBeep(2);
+        setMode(Mode::NORMAL);
+        return;
       }
+      return;
     }
 
     // RESET MODE
@@ -261,7 +301,7 @@ void Door::handle(unsigned long card) {
           // Triple tap -> FACTORY RESET
           Storage::factoryReset();
           shortBeep(10);
-          setMode(Mode::INIT);
+          reboot();
           return;
         } else {
           // Normal tap -> EXIT
@@ -277,6 +317,7 @@ void Door::handle(unsigned long card) {
         return;
       }
     }
+    return;
   }
 }
 
@@ -292,29 +333,37 @@ void Door::setMode(Mode m) {
   
   mode = m;
   modeStart = millis();
+
+  if (checkAdminTaskId > 0) {
+    checkAdminTaskId = 0;
+    tasks.remove(checkAdminTaskId);
+  }
+  
   switch(mode) {
     case Mode::NORMAL:
       stopFlashing();
       return;
+    case Mode::ADD:
     case Mode::DELETE:
-      startFlashing(250);
-      return;
     case Mode::RESET:
-      startFlashing(50);
+      checkAdminTaskId = tasks.once([]() {
+        Door::checkExitAdmin();
+      }, DOOR_ADMIN_TIMEOUT);
+      startFlashing(400);
       return;
-    default:
-      startFlashing(500);
+    case Mode::INIT:
+      startFlashing(1000);
       return;
   }
 }
 
 void Door::flash() {
-  flash(flashOnOff ? 0 : 1);
+  flash(flashBit ? 0 : 1);
 }
 
 void Door::flash(byte onOff) {
   if (isConnected) {
-    digitalWrite(PIN_LED, flashOnOff = onOff); 
+    digitalWrite(PIN_LED, flashBit = onOff); 
   } else {
     digitalWrite(PIN_LED, LOW);
   }
@@ -322,17 +371,27 @@ void Door::flash(byte onOff) {
 
 void Door::open() {
   digitalWrite(PIN_RELAY, HIGH);
-  delay(2*SECOND);
+  delay(1*SECOND);
   digitalWrite(PIN_RELAY, LOW);
 }
 
 void Door::startFlashing(unsigned int interval = 500) {
-  flashingInterval = interval;
-  on->startFlashing();  
+  Serial.println("Door.startFlashing()");
+  if (isFlashing) stopFlashing();
+  flashingTaskId = tasks.repeat([]() {
+    Door::checkFlashing();
+  }, interval);
+  isFlashing = true;
 }
 
 void Door::stopFlashing() {
-  on->stopFlashing();
+  Serial.println("Door.stopFlashing()");
+  if (flashingTaskId > 0) {
+    tasks.remove(flashingTaskId);
+    flashingTaskId = 0;
+    isFlashing = false;
+    flash(false);
+  }
 }
 
 void Door::shortBeep(byte count = 1) {
