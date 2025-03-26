@@ -36,7 +36,6 @@ class Door {
     void open();
     void startFlashing(unsigned int interval = 500);
     void stopFlashing();
-    void fastBeep(byte count = 1);
     void shortBeep(byte count = 1);
     void mediumBeep(byte count = 1);
     void longBeep(byte count = 1);
@@ -144,12 +143,15 @@ void Door::handle(unsigned long card) {
     case Mode::INIT: {
       if (slot == -1) {
         Storage::save(card);
-        if (Storage::cards == 1) Serial.println("Master ADD Saved!");
+        if (Storage::cards == 1) {
+          Serial.println("Master ADD Saved!");
+          shortBeep();
+        }
         if (Storage::cards >= 2) {
           Serial.println("Master DELETE Saved!");
           Storage::setMasterReader(ID);
           setMode(Mode::NORMAL);
-          fastBeep(2);
+          shortBeep(2);
           stopFlashing();
         }
       } else {
@@ -174,12 +176,12 @@ void Door::handle(unsigned long card) {
       }
       else if (isAdmin && slot == DOOR_MASTERCARD_ADD) {
         setMode(Mode::ADD);
-        fastBeep(2);
+        shortBeep(2);
         return;
       }
       else if (isAdmin && slot == DOOR_MASTERCARD_DELETE) {
         setMode(Mode::DELETE);
-        fastBeep(2);
+        shortBeep(2);
         return;
       }
       else 
@@ -193,18 +195,20 @@ void Door::handle(unsigned long card) {
     // Adds tapped ID cards.
     //
     // - Card known:          Nothing
-    // - Card unknown:        Adds to storage
-    // - Master ADD card:     -> Exits
+    // - Card unknown:        Adds to storage + EXITs
+    // - Master ADD card:     -> Just EXITs
     // 
     case Mode::ADD: {
       if (slot < 0) {
-        // Unknown card
+        // Unknown card -> ADD + EXIT
         Storage::save(card);
-        fastBeep();
+        shortBeep(2);
+        setMode(Mode::NORMAL);
         return;
       } else if (slot == DOOR_MASTERCARD_ADD) {
+        // Master card -> JUST EXIT
+        shortBeep(1);
         setMode(Mode::NORMAL);
-        fastBeep(2);
         return;
       }
     }
@@ -213,10 +217,10 @@ void Door::handle(unsigned long card) {
     //
     // Deletes tapped ID cards.
     //
-    // - Card known:          Removes to storage
+    // - Card known:          Removes from storage + EXITs
     // - Card unknown:        Nothing
     // - Double-tap:          -> RESET MODE (Clears known ID cards, except for Master ADD/DELETE)
-    // - Master DELETE card:  -> Exits
+    // - Master DELETE card:  -> Just EXITs
     // 
     case Mode::DELETE: {
       if (slot == DOOR_MASTERCARD_ADD) {
@@ -224,20 +228,21 @@ void Door::handle(unsigned long card) {
       } else if (slot == DOOR_MASTERCARD_DELETE) {
         if (millis() - modeStart < 5 * SECOND) {
           // Double tap -> RESET
-          setMode(Mode::RESET);
+          shortBeep(5);
           Storage::reset();
-          fastBeep(5);
+          setMode(Mode::RESET);
           return;
         } else {
-          // Normal tap -> EXIT
+          // Normal tap -> JUST EXIT
+          shortBeep(2);
           setMode(Mode::NORMAL);
-          fastBeep(2);
           return;
         }
       } else if (slot >= 0) {
-        // Known card
+        // Known card -> REMOVE + EXIT
         Storage::remove(card);
-        shortBeep();
+        shortBeep(2);
+        setMode(Mode::NORMAL);
         return;
       }
     }
@@ -246,10 +251,9 @@ void Door::handle(unsigned long card) {
     //
     // Clears all known ID cards (except Master ADD/DELETE)
     //
-    // - Card known:          Nothing
-    // - Card unknown:        Adds to storage
+    // - Card unknown:        Adds to storage + EXITs
     // - Triple-tap:          -> FACTORY RESET (Clears all cards, including Master ADD/DELETE)
-    // - Master DELETE card:  -> Exits
+    // - Master DELETE card:  -> Just EXITs
     // 
     case Mode::RESET: {
       if (slot == DOOR_MASTERCARD_DELETE) {
@@ -266,9 +270,10 @@ void Door::handle(unsigned long card) {
           return;
         }
       } else if (slot < 0) {
-        // Unknown card
+        // Unknown card -> Adds + EXITs
         Storage::save(card);
         shortBeep();
+        setMode(Mode::NORMAL);
         return;
       }
     }
@@ -330,16 +335,12 @@ void Door::stopFlashing() {
   on->stopFlashing();
 }
 
-void Door::fastBeep(byte count = 1) {
+void Door::shortBeep(byte count = 1) {
   beep(count, 50*MS);
 }
 
-void Door::shortBeep(byte count = 1) {
-  beep(count, 100*MS);
-}
-
 void Door::mediumBeep(byte count = 1) {
-  beep(count, 400*MS);
+  beep(count, 120*MS);
 }
 
 void Door::longBeep(byte count = 1) {
