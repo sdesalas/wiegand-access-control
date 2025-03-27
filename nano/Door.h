@@ -77,7 +77,6 @@ byte PIN_BUZ;
 byte PIN_RELAY;
 
 void Door::checkFlashing() {
-  Serial.println("Door::checkFlashing()");
   for (byte i = 0; i < DOOR_MAX_COUNT; i++) {
     Door *door = Door::all[i];
     if (door && door->flashingTaskId > 0) {
@@ -88,7 +87,6 @@ void Door::checkFlashing() {
 }
 
 void Door::checkExitAdmin() {
-  Serial.println("Door::checkExitAdmin()");
   for (byte i = 0; i < DOOR_MAX_COUNT; i++) {
     Door *door = Door::all[i];
     if (door && door->isAdmin && door->checkAdminTaskId > 0) {
@@ -183,11 +181,9 @@ void Door::handle(unsigned long card) {
       if (slot == -1) {
         Storage::save(card);
         if (Storage::cards == 1) {
-          Serial.println("Master ADD Saved!");
           shortBeep();
         }
         if (Storage::cards >= 2) {
-          Serial.println("Master DELETE Saved!");
           Storage::setMasterReader(ID);
           setMode(Mode::NORMAL);
           shortBeep(2);
@@ -376,7 +372,6 @@ void Door::open() {
 }
 
 void Door::startFlashing(unsigned int interval = 500) {
-  Serial.println("Door.startFlashing()");
   if (isFlashing) stopFlashing();
   flashingTaskId = tasks.repeat([]() {
     Door::checkFlashing();
@@ -385,7 +380,6 @@ void Door::startFlashing(unsigned int interval = 500) {
 }
 
 void Door::stopFlashing() {
-  Serial.println("Door.stopFlashing()");
   if (flashingTaskId > 0) {
     tasks.remove(flashingTaskId);
     flashingTaskId = 0;

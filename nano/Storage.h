@@ -16,7 +16,7 @@
 #ifndef _STORAGE_H_
 #define _STORAGE_H_
 
-#define DEBUG 1
+#define DEBUG 0
 
 // Storage location in EEPROM
 // This number < 800 should be rotated for reduced wear.
@@ -65,6 +65,7 @@ namespace Storage {
   void init() {
     cards = EEPROM.read(STORAGE_META_ADDRESS);
     adminReader = EEPROM.read(STORAGE_META_ADDRESS + 1);
+
     #if DEBUG
     Serial.print("Storage::cards "); Serial.println(cards);
     Serial.print("Storage::adminReader "); Serial.println(adminReader);
@@ -80,14 +81,17 @@ namespace Storage {
     Serial.print("Storage::find() -> ");
     Serial.println(card);
     #endif
+
     for(byte i = 0; i < STORAGE_MAX_CARDS; i++) {
       if (i >= cards) break; // no more cards
       unsigned long slot = read(i);
+
       #if DEBUG
       Serial.print(i);
       Serial.print(" -> ");
       Serial.println(slot);
       #endif
+
       if (slot == card) return i;
     }
     return -1;
@@ -101,6 +105,7 @@ namespace Storage {
     Serial.print(" => ");
     Serial.println(card);
     #endif
+
     // check the limit
     if (slot > STORAGE_MAX_CARDS) return false;
   
@@ -143,6 +148,7 @@ namespace Storage {
     Serial.print("Storage::remove() ");
     Serial.println(card);
     #endif
+    
     int slot = find(card);
     if (slot < 0) return false;
 
