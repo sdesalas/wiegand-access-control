@@ -6,10 +6,10 @@
  * Note that Arduino Nano/Uno have 1024 EEPROM bytes.
  * Around 100,000 write cycles so we should be careful wear rotation.
  * 
- * First byte is number of cards in storage.
+ * Storage is in 4-byte slots. First 4 bytes contain metadata.
  * Each 4 bytes after contains is a 10-digit card ID.
  * 
- * Each card is 12ms read so max time to find a card is ~1200ms.
+ * Each card is 12ms read (4 bytes / 3s each) so max time to find a card is ~0.4s.
  */
 #include "EEPROM.h"
 
