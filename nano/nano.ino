@@ -15,8 +15,10 @@ void setup() {
   delay(500);
   Storage::init();
   Door1_init();
+  Door2_init();
 }
 
 void loop() {
   Door1_loop();
+  Door2_loop();
 }

@@ -26,8 +26,9 @@
 
 namespace Storage {
 
-  // metadata
+  // number of cards currently stored
   byte cards = 0;
+  // which of the doors can adminster cards
   byte adminReader = 0;
   
   void reset() {
@@ -148,7 +149,7 @@ namespace Storage {
     Serial.print("Storage::remove() ");
     Serial.println(card);
     #endif
-    
+
     int slot = find(card);
     if (slot < 0) return false;
 
