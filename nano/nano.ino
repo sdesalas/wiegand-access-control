@@ -16,9 +16,11 @@ void setup() {
   Storage::init();
   Door1_init();
   Door2_init();
+  Reset_init();
 }
 
 void loop() {
   Door1_loop();
   Door2_loop();
+  Reset_loop();
 }
